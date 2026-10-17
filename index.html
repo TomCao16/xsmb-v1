@@ -29,13 +29,15 @@
       padding: 24px 16px 48px;
     }
 
-    header {
+    header, .panel {
       background: #fff;
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 24px;
       margin-bottom: 18px;
     }
+
+    .panel { padding: 20px; }
 
     .eyebrow {
       color: var(--primary);
@@ -49,23 +51,15 @@
       margin: 10px 0;
     }
 
+    h2 {
+      font-size: 19px;
+      margin: 0 0 16px;
+    }
+
     .subtitle {
       color: var(--muted);
       line-height: 1.6;
       margin: 0;
-    }
-
-    .panel {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 20px;
-      margin-bottom: 18px;
-    }
-
-    h2 {
-      font-size: 19px;
-      margin: 0 0 16px;
     }
 
     label {
@@ -108,11 +102,10 @@
       font-size: 14px;
       line-height: 1.7;
       overflow-wrap: anywhere;
+      margin: 16px 0;
     }
 
-    .source a {
-      color: var(--primary);
-    }
+    .source a { color: var(--primary); }
 
     .status {
       padding: 13px 14px;
@@ -122,6 +115,7 @@
       color: #475569;
       font-size: 14px;
       line-height: 1.6;
+      overflow-wrap: anywhere;
     }
 
     .number-area {
@@ -129,7 +123,6 @@
       padding: 16px;
       border: 1px dashed #cbd5e1;
       border-radius: 10px;
-      text-align: center;
       color: var(--muted);
       line-height: 1.7;
     }
@@ -144,6 +137,45 @@
       font-size: 12px;
       font-weight: 700;
     }
+
+    .loto-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .number-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 48px;
+      min-height: 42px;
+      padding: 8px;
+      border: 1px solid #dce3ed;
+      border-radius: 8px;
+      background: #f8fafc;
+      color: #174ea6;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .prize-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 18px;
+      font-size: 14px;
+    }
+
+    .prize-table th, .prize-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+
+    .prize-table th { background: #f8fafc; }
 
     footer {
       text-align: center;
@@ -172,8 +204,8 @@
       <div class="eyebrow">XSMB · VERSION 1.0</div>
       <h1>Phân tích lô 2 số</h1>
       <p class="subtitle">
-        Đọc kết quả xổ số miền Bắc trong 7 ngày, kiểm tra dữ liệu
-        theo ngày và phân tích các cặp số từ kết quả thực tế.
+        Đọc kết quả xổ số miền Bắc theo ngày từ nguồn thực tế.
+        Chỉ hiển thị dữ liệu sau khi kiểm tra tính đầy đủ và ngày yêu cầu.
       </p>
     </header>
 
@@ -185,68 +217,66 @@
           <label for="targetDate">Ngày cần phân tích</label>
           <input type="date" id="targetDate">
         </div>
-
-        <button id="readButton" type="button">
-          ĐỌC NGUỒN
-        </button>
+        <button id="readButton" type="button">ĐỌC NGUỒN</button>
       </div>
 
       <div class="source">
-        <p><strong>Nguồn dữ liệu duy nhất:</strong></p>
-        <a
-          href="https://ketqua16.net/so-ket-qua"
-          target="_blank"
-          rel="noopener noreferrer"
-        >https://ketqua16.net/so-ket-qua</a>
+        <strong>Nguồn dữ liệu duy nhất:</strong><br>
+        <a href="https://ketqua16.net/so-ket-qua"
+           target="_blank" rel="noopener noreferrer">
+          https://ketqua16.net/so-ket-qua
+        </a>
       </div>
 
       <div class="status" id="readStatus" role="status" aria-live="polite">
-        Chưa đọc dữ liệu. Cần kết nối bộ đọc nguồn trước khi phân tích.
+        Đang chuẩn bị kết nối bộ đọc nguồn.
       </div>
     </section>
 
     <section class="panel">
-      <span class="section-label">KẾT QUẢ PHÂN TÍCH</span>
+      <span class="section-label">KẾT QUẢ ĐÃ ĐỌC</span>
       <h2>2. LÔ 2 SỐ</h2>
-
       <div class="number-area" id="lotoResults">
-        Chưa có dữ liệu thực tế đã xác minh.
-        <br>
-        Các số sẽ chỉ được hiển thị sau khi đọc và kiểm tra nguồn thành công.
+        Chưa có dữ liệu được xác minh.
       </div>
+      <div id="prizeResults"></div>
     </section>
 
     <section class="panel">
       <h2>3. Kiểm tra dữ liệu 7 ngày</h2>
-
       <div class="status" id="historyStatus">
-        Chưa tải dữ liệu lịch sử. Chưa có thống kê hoặc tỷ lệ khớp nào được tính.
+        Chưa tải dữ liệu 7 ngày. Chưa tính thống kê hoặc tỷ lệ khớp.
       </div>
     </section>
 
     <section class="panel">
       <h2>4. Nguồn và trạng thái xác minh</h2>
-
       <div class="status" id="sourceStatus">
-        Trạng thái: Chưa kết nối bộ đọc nguồn.
-        <br>
-        Yêu cầu: đúng ngày, dữ liệu thực tế, không tự tạo số.
+        Chưa đọc dữ liệu. Chưa xác minh ngày hoặc số lượng kết quả.
       </div>
     </section>
 
     <footer>
-      XSMB V1 · Công cụ đọc và phân tích dữ liệu tham khảo.
-      <br>
-      Chỉ báo cáo kết quả có nguồn xác minh; không đảm bảo dự đoán tương lai.
+      XSMB V1 · Công cụ đọc và phân tích dữ liệu tham khảo.<br>
+      Kết quả quá khứ không đảm bảo dự đoán tương lai.
     </footer>
   </main>
 
   <script>
+    const API_URL =
+      "https://xsmb-v1-reader.czcaonguyen.workers.dev";
+
+    const SOURCE_URL =
+      "https://ketqua16.net/so-ket-qua";
+
     const dateInput = document.getElementById("targetDate");
     const readButton = document.getElementById("readButton");
     const readStatus = document.getElementById("readStatus");
+    const lotoResults = document.getElementById("lotoResults");
+    const prizeResults = document.getElementById("prizeResults");
+    const historyStatus = document.getElementById("historyStatus");
+    const sourceStatus = document.getElementById("sourceStatus");
 
-    // Mặc định chọn ngày hiện tại theo giờ trên thiết bị.
     const now = new Date();
     const localDate = [
       now.getFullYear(),
@@ -257,24 +287,247 @@
     dateInput.value = localDate;
     dateInput.max = localDate;
 
-    readButton.addEventListener("click", function () {
-      if (!dateInput.value) {
-        readStatus.textContent = "Vui lòng chọn ngày cần phân tích.";
+    function clearResults() {
+      lotoResults.textContent = "Chưa có dữ liệu được xác minh.";
+      prizeResults.replaceChildren();
+    }
+
+    function showPrizes(prizes) {
+      const table = document.createElement("table");
+      table.className = "prize-table";
+
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+
+      ["Giải", "Kết quả"].forEach(text => {
+        const th = document.createElement("th");
+        th.textContent = text;
+        headerRow.appendChild(th);
+      });
+
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      const prizeNames = {
+        DB: "Đặc biệt",
+        G1: "Giải nhất",
+        G2: "Giải nhì",
+        G3: "Giải ba",
+        G4: "Giải tư",
+        G5: "Giải năm",
+        G6: "Giải sáu",
+        G7: "Giải bảy"
+      };
+
+      Object.entries(prizes).forEach(([key, numbers]) => {
+        const tr = document.createElement("tr");
+        const nameCell = document.createElement("td");
+        const numberCell = document.createElement("td");
+
+        nameCell.textContent = prizeNames[key] || key;
+        numberCell.textContent = numbers.join(" · ");
+
+        tr.append(nameCell, numberCell);
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      prizeResults.replaceChildren(table);
+    }
+
+    function validateResponse(data, requestedDate) {
+      if (!data || data.ok !== true) {
+        throw new Error(
+          data?.error || "Bộ đọc nguồn không trả về kết quả thành công."
+        );
+      }
+
+      const result = data.result;
+      const prizes = result?.prizes;
+      const expectedCounts = {
+        DB: 1, G1: 1, G2: 2, G3: 6,
+        G4: 4, G5: 6, G6: 3, G7: 4
+      };
+
+      if (
+        data.requested_date !== requestedDate ||
+        data.date_verified !== true ||
+        result?.date !== requestedDate
+      ) {
+        throw new Error(
+          "Ngày trả về không khớp ngày đã chọn. Đã từ chối dữ liệu."
+        );
+      }
+
+      if (
+        result.complete !== true ||
+        result.validation?.actual_total !== 27 ||
+        result.validation?.expected_total !== 27
+      ) {
+        throw new Error(
+          "Dữ liệu chưa vượt qua kiểm tra đủ 27 kết quả giải."
+        );
+      }
+
+      if (!prizes || !Array.isArray(result.loto)) {
+        throw new Error("Thiếu danh sách giải hoặc danh sách lô.");
+      }
+
+      for (const [key, expected] of Object.entries(expectedCounts)) {
+        if (
+          !Array.isArray(prizes[key]) ||
+          prizes[key].length !== expected ||
+          prizes[key].some(n => !/^\d{2,5}$/.test(n))
+        ) {
+          throw new Error(
+            "Số lượng hoặc định dạng giải " + key + " không hợp lệ."
+          );
+        }
+      }
+
+      const actualNumbers = Object.values(prizes)
+        .reduce((sum, values) => sum + values.length, 0);
+
+      if (
+        actualNumbers !== 27 ||
+        result.loto.length !== 27 ||
+        result.loto.some(n => !/^\d{2}$/.test(n))
+      ) {
+        throw new Error(
+          "Danh sách kết quả không đạt kiểm tra 27 số. Đã từ chối hiển thị."
+        );
+      }
+
+      const expectedLoto = Object.values(prizes)
+        .flat()
+        .map(n => n.slice(-2).padStart(2, "0"));
+
+      if (expectedLoto.some((n, i) => n !== result.loto[i])) {
+        throw new Error(
+          "Danh sách lô không khớp với kết quả giải. Đã từ chối hiển thị."
+        );
+      }
+
+      return result;
+    }
+
+    function showLoto(numbers) {
+      const list = document.createElement("div");
+      list.className = "loto-list";
+
+      numbers.forEach(number => {
+        const chip = document.createElement("span");
+        chip.className = "number-chip";
+        chip.textContent = number;
+        list.appendChild(chip);
+      });
+
+      lotoResults.replaceChildren(list);
+
+      const note = document.createElement("p");
+      note.textContent =
+        "Đã đọc " + numbers.length +
+        " lượt kết quả lô từ 27 số giải. Các số lặp được giữ nguyên.";
+      lotoResults.appendChild(note);
+    }
+
+    readButton.addEventListener("click", async function () {
+      const requestedDate = dateInput.value;
+
+      clearResults();
+
+      if (!requestedDate) {
+        readStatus.textContent = "Vui lòng chọn ngày cần đọc.";
         return;
       }
 
+      if (requestedDate > localDate) {
+        readStatus.textContent = "Không thể chọn ngày trong tương lai.";
+        return;
+      }
+
+      readButton.disabled = true;
+      readButton.textContent = "ĐANG ĐỌC...";
       readStatus.textContent =
-        "Giao diện đã nhận ngày " + dateInput.value +
-        ". Bộ đọc nguồn chưa được kết nối nên chưa tải hoặc phân tích dữ liệu.";
+        "Đang yêu cầu dữ liệu ngày " + requestedDate + "...";
 
-      document.getElementById("lotoResults").textContent =
-        "Chưa có dữ liệu thực tế đã xác minh.";
+      sourceStatus.textContent =
+        "Đang kiểm tra ngày, số lượng giải và danh sách lô.";
 
-      document.getElementById("historyStatus").textContent =
+      historyStatus.textContent =
         "Chưa tải dữ liệu 7 ngày. Chưa tính thống kê.";
 
-      document.getElementById("sourceStatus").textContent =
-        "Chưa kết nối bộ đọc nguồn. Không tạo số thay thế và không sử dụng dữ liệu của ngày khác.";
+      try {
+        const url = API_URL + "/read?date=" +
+          encodeURIComponent(requestedDate);
+
+        const response = await fetch(url, {
+          method: "GET",
+          headers: { "Accept": "application/json" },
+          cache: "no-store"
+        });
+
+        let data;
+
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error(
+            "Worker không trả về JSON hợp lệ (HTTP " +
+            response.status + ")."
+          );
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            data?.error ||
+            ("Không đọc được nguồn (HTTP " + response.status + ").")
+          );
+        }
+
+        const result = validateResponse(data, requestedDate);
+
+        showLoto(result.loto);
+        showPrizes(result.prizes);
+
+        readStatus.textContent =
+          "THÀNH CÔNG: đã đọc đúng ngày " + result.date +
+          ", đủ 27 kết quả giải và 27 lượt lô.";
+
+        sourceStatus.textContent =
+          "Nguồn: " + SOURCE_URL +
+          " | Ngày yêu cầu: " + requestedDate +
+          " | Ngày dữ liệu: " + result.date +
+          " | Kiểm tra: ĐẠT (27/27) | Worker: " +
+          (data.worker || "xsmb-v1-reader") +
+          ". Việc này xác nhận cấu trúc và tính nhất quán dữ liệu; " +
+          "chưa thay thế đối chiếu độc lập với bảng kết quả gốc.";
+
+        historyStatus.textContent =
+          "Chưa tải dữ liệu 7 ngày. Hiện mới đọc ngày " +
+          result.date +
+          "; chưa tính tần suất, tỷ lệ khớp hoặc dự đoán.";
+
+      } catch (error) {
+        clearResults();
+
+        readStatus.textContent =
+          "KHÔNG ĐỌC ĐƯỢC: " +
+          String(error?.message || error);
+
+        sourceStatus.textContent =
+          "Không có dữ liệu nào được chấp nhận cho ngày " +
+          requestedDate +
+          ". Nguồn: " + SOURCE_URL +
+          ". Hãy kiểm tra thông báo lỗi trước khi thử lại.";
+
+        historyStatus.textContent =
+          "Chưa có dữ liệu lịch sử được xác minh. Không tính thống kê.";
+      } finally {
+        readButton.disabled = false;
+        readButton.textContent = "ĐỌC NGUỒN";
+      }
     });
   </script>
 </body>
