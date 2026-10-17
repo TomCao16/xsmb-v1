@@ -12,6 +12,8 @@
       --border: #dce3ed;
       --text: #182230;
       --muted: #64748b;
+      --success: #166534;
+      --danger: #b91c1c;
     }
 
     * { box-sizing: border-box; }
@@ -24,7 +26,7 @@
     }
 
     .container {
-      width: min(920px, 100%);
+      width: min(1100px, 100%);
       margin: 0 auto;
       padding: 24px 16px 48px;
     }
@@ -54,6 +56,11 @@
     h2 {
       font-size: 19px;
       margin: 0 0 16px;
+    }
+
+    h3 {
+      font-size: 16px;
+      margin: 22px 0 12px;
     }
 
     .subtitle {
@@ -118,6 +125,18 @@
       overflow-wrap: anywhere;
     }
 
+    .status.success {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+      color: var(--success);
+    }
+
+    .status.error {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: var(--danger);
+    }
+
     .number-area {
       min-height: 100px;
       padding: 16px;
@@ -149,25 +168,29 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 48px;
-      min-height: 42px;
-      padding: 8px;
+      min-width: 44px;
+      min-height: 38px;
+      padding: 7px;
       border: 1px solid #dce3ed;
       border-radius: 8px;
       background: #f8fafc;
       color: #174ea6;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 700;
     }
 
-    .prize-table {
+    .prize-table,
+    .data-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 18px;
-      font-size: 14px;
+      margin-top: 16px;
+      font-size: 13px;
     }
 
-    .prize-table th, .prize-table td {
+    .prize-table th,
+    .prize-table td,
+    .data-table th,
+    .data-table td {
       padding: 10px 8px;
       border-bottom: 1px solid var(--border);
       text-align: left;
@@ -175,7 +198,63 @@
       overflow-wrap: anywhere;
     }
 
-    .prize-table th { background: #f8fafc; }
+    .prize-table th,
+    .data-table th {
+      background: #f8fafc;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .data-table th {
+      white-space: nowrap;
+    }
+
+    .data-table .number {
+      font-weight: 700;
+      color: var(--primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .data-table .center {
+      text-align: center;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      background: #f8fafc;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .metric-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 5px;
+    }
+
+    .small-note {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-top: 10px;
+    }
 
     footer {
       text-align: center;
@@ -194,6 +273,10 @@
       }
 
       button { margin-top: 0; }
+
+      .metric-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
     }
   </style>
 </head>
@@ -201,11 +284,11 @@
 <body>
   <main class="container">
     <header>
-      <div class="eyebrow">XSMB · VERSION 1.0</div>
+      <div class="eyebrow">XSMB · VERSION 1.1</div>
       <h1>Phân tích lô 2 số</h1>
       <p class="subtitle">
-        Đọc kết quả xổ số miền Bắc theo ngày từ nguồn thực tế.
-        Chỉ hiển thị dữ liệu sau khi kiểm tra tính đầy đủ và ngày yêu cầu.
+        Đọc kết quả xổ số miền Bắc theo ngày và thống kê 7 ngày lịch sử
+        từ nguồn thực tế. Chỉ tính thống kê khi dữ liệu vượt qua kiểm tra.
       </p>
     </header>
 
@@ -214,7 +297,7 @@
 
       <div class="controls">
         <div>
-          <label for="targetDate">Ngày cần phân tích</label>
+          <label for="targetDate">Ngày mục tiêu</label>
           <input type="date" id="targetDate">
         </div>
         <button id="readButton" type="button">ĐỌC NGUỒN</button>
@@ -229,12 +312,12 @@
       </div>
 
       <div class="status" id="readStatus" role="status" aria-live="polite">
-        Đang chuẩn bị kết nối bộ đọc nguồn.
+        Chọn ngày và nhấn ĐỌC NGUỒN để bắt đầu.
       </div>
     </section>
 
     <section class="panel">
-      <span class="section-label">KẾT QUẢ ĐÃ ĐỌC</span>
+      <span class="section-label">KẾT QUẢ NGÀY MỤC TIÊU</span>
       <h2>2. LÔ 2 SỐ</h2>
       <div class="number-area" id="lotoResults">
         Chưa có dữ liệu được xác minh.
@@ -243,22 +326,32 @@
     </section>
 
     <section class="panel">
-      <h2>3. Kiểm tra dữ liệu 7 ngày</h2>
+      <h2>3. Lịch sử 7 ngày trước ngày mục tiêu</h2>
       <div class="status" id="historyStatus">
-        Chưa tải dữ liệu 7 ngày. Chưa tính thống kê hoặc tỷ lệ khớp.
+        Chưa tải dữ liệu lịch sử.
       </div>
+      <div id="historyMetrics"></div>
+      <div id="historyResults"></div>
     </section>
 
     <section class="panel">
-      <h2>4. Nguồn và trạng thái xác minh</h2>
+      <h2>4. Thống kê lô 2 số: 00–99</h2>
+      <div class="status" id="statsStatus">
+        Chỉ tính thống kê khi đủ 7 ngày hợp lệ.
+      </div>
+      <div id="frequencyResults"></div>
+    </section>
+
+    <section class="panel">
+      <h2>5. Nguồn và trạng thái xác minh</h2>
       <div class="status" id="sourceStatus">
-        Chưa đọc dữ liệu. Chưa xác minh ngày hoặc số lượng kết quả.
+        Chưa đọc dữ liệu.
       </div>
     </section>
 
     <footer>
-      XSMB V1 · Công cụ đọc và phân tích dữ liệu tham khảo.<br>
-      Kết quả quá khứ không đảm bảo dự đoán tương lai.
+      XSMB V1 · Công cụ đọc và thống kê dữ liệu tham khảo.<br>
+      Tần suất trong quá khứ không đảm bảo kết quả tương lai.
     </footer>
   </main>
 
@@ -275,9 +368,36 @@
     const lotoResults = document.getElementById("lotoResults");
     const prizeResults = document.getElementById("prizeResults");
     const historyStatus = document.getElementById("historyStatus");
+    const historyMetrics = document.getElementById("historyMetrics");
+    const historyResults = document.getElementById("historyResults");
+    const statsStatus = document.getElementById("statsStatus");
+    const frequencyResults = document.getElementById("frequencyResults");
     const sourceStatus = document.getElementById("sourceStatus");
 
+    const EXPECTED_COUNTS = {
+      DB: 1,
+      G1: 1,
+      G2: 2,
+      G3: 6,
+      G4: 4,
+      G5: 6,
+      G6: 3,
+      G7: 4
+    };
+
+    const PRIZE_NAMES = {
+      DB: "Đặc biệt",
+      G1: "Giải nhất",
+      G2: "Giải nhì",
+      G3: "Giải ba",
+      G4: "Giải tư",
+      G5: "Giải năm",
+      G6: "Giải sáu",
+      G7: "Giải bảy"
+    };
+
     const now = new Date();
+
     const localDate = [
       now.getFullYear(),
       String(now.getMonth() + 1).padStart(2, "0"),
@@ -287,21 +407,48 @@
     dateInput.value = localDate;
     dateInput.max = localDate;
 
-    function clearResults() {
+    function shiftDate(date, days) {
+      const value = new Date(date + "T00:00:00Z");
+      value.setUTCDate(value.getUTCDate() + days);
+      return value.toISOString().slice(0, 10);
+    }
+
+    function setStatus(element, message, type = "") {
+      element.textContent = message;
+      element.className = "status" + (type ? " " + type : "");
+    }
+
+    function clearDayResults() {
       lotoResults.textContent = "Chưa có dữ liệu được xác minh.";
       prizeResults.replaceChildren();
     }
 
-    function showPrizes(prizes) {
+    function clearHistoryResults() {
+      historyMetrics.replaceChildren();
+      historyResults.replaceChildren();
+      frequencyResults.replaceChildren();
+
+      setStatus(
+        historyStatus,
+        "Chưa tải dữ liệu lịch sử."
+      );
+
+      setStatus(
+        statsStatus,
+        "Chỉ tính thống kê khi đủ 7 ngày hợp lệ."
+      );
+    }
+
+    function makeTable(headers, rows, className = "data-table") {
       const table = document.createElement("table");
-      table.className = "prize-table";
+      table.className = className;
 
       const thead = document.createElement("thead");
       const headerRow = document.createElement("tr");
 
-      ["Giải", "Kết quả"].forEach(text => {
+      headers.forEach(header => {
         const th = document.createElement("th");
-        th.textContent = text;
+        th.textContent = header;
         headerRow.appendChild(th);
       });
 
@@ -309,107 +456,43 @@
       table.appendChild(thead);
 
       const tbody = document.createElement("tbody");
-      const prizeNames = {
-        DB: "Đặc biệt",
-        G1: "Giải nhất",
-        G2: "Giải nhì",
-        G3: "Giải ba",
-        G4: "Giải tư",
-        G5: "Giải năm",
-        G6: "Giải sáu",
-        G7: "Giải bảy"
-      };
 
-      Object.entries(prizes).forEach(([key, numbers]) => {
+      rows.forEach(values => {
         const tr = document.createElement("tr");
-        const nameCell = document.createElement("td");
-        const numberCell = document.createElement("td");
 
-        nameCell.textContent = prizeNames[key] || key;
-        numberCell.textContent = numbers.join(" · ");
+        values.forEach(value => {
+          const td = document.createElement("td");
 
-        tr.append(nameCell, numberCell);
+          if (value && typeof value === "object" &&
+              value.nodeType === Node.ELEMENT_NODE) {
+            td.appendChild(value);
+          } else {
+            td.textContent = String(value);
+          }
+
+          tr.appendChild(td);
+        });
+
         tbody.appendChild(tr);
       });
 
       table.appendChild(tbody);
-      prizeResults.replaceChildren(table);
+      return table;
     }
 
-    function validateResponse(data, requestedDate) {
-      if (!data || data.ok !== true) {
-        throw new Error(
-          data?.error || "Bộ đọc nguồn không trả về kết quả thành công."
-        );
-      }
+    function showPrizes(prizes) {
+      const rows = Object.entries(prizes).map(([key, numbers]) => [
+        PRIZE_NAMES[key] || key,
+        numbers.join(" · ")
+      ]);
 
-      const result = data.result;
-      const prizes = result?.prizes;
-      const expectedCounts = {
-        DB: 1, G1: 1, G2: 2, G3: 6,
-        G4: 4, G5: 6, G6: 3, G7: 4
-      };
+      const wrapper = document.createElement("div");
+      wrapper.className = "table-wrap";
+      wrapper.appendChild(
+        makeTable(["Giải", "Kết quả"], rows, "prize-table")
+      );
 
-      if (
-        data.requested_date !== requestedDate ||
-        data.date_verified !== true ||
-        result?.date !== requestedDate
-      ) {
-        throw new Error(
-          "Ngày trả về không khớp ngày đã chọn. Đã từ chối dữ liệu."
-        );
-      }
-
-      if (
-        result.complete !== true ||
-        result.validation?.actual_total !== 27 ||
-        result.validation?.expected_total !== 27
-      ) {
-        throw new Error(
-          "Dữ liệu chưa vượt qua kiểm tra đủ 27 kết quả giải."
-        );
-      }
-
-      if (!prizes || !Array.isArray(result.loto)) {
-        throw new Error("Thiếu danh sách giải hoặc danh sách lô.");
-      }
-
-      for (const [key, expected] of Object.entries(expectedCounts)) {
-        if (
-          !Array.isArray(prizes[key]) ||
-          prizes[key].length !== expected ||
-          prizes[key].some(n => !/^\d{2,5}$/.test(n))
-        ) {
-          throw new Error(
-            "Số lượng hoặc định dạng giải " + key + " không hợp lệ."
-          );
-        }
-      }
-
-      const actualNumbers = Object.values(prizes)
-        .reduce((sum, values) => sum + values.length, 0);
-
-      if (
-        actualNumbers !== 27 ||
-        result.loto.length !== 27 ||
-        result.loto.some(n => !/^\d{2}$/.test(n))
-      ) {
-        throw new Error(
-          "Danh sách kết quả không đạt kiểm tra 27 số. Đã từ chối hiển thị."
-        );
-      }
-
-      const expectedLoto = Object.values(prizes)
-        .flat()
-        .map(n => n.slice(-2).padStart(2, "0"));
-
-      if (expectedLoto.some((n, i) => n !== result.loto[i])) {
-        throw new Error(
-          "Danh sách lô không khớp với kết quả giải. Đã từ chối hiển thị."
-        );
-      }
-
-      return result;
+      prizeResults.replaceChildren(wrapper);
     }
 
     function showLoto(numbers) {
@@ -423,107 +506,526 @@
         list.appendChild(chip);
       });
 
-      lotoResults.replaceChildren(list);
-
       const note = document.createElement("p");
+      note.className = "small-note";
       note.textContent =
         "Đã đọc " + numbers.length +
-        " lượt kết quả lô từ 27 số giải. Các số lặp được giữ nguyên.";
-      lotoResults.appendChild(note);
+        " lượt lô từ 27 số giải. Các số lặp được giữ nguyên.";
+
+      lotoResults.replaceChildren(list, note);
     }
 
-    readButton.addEventListener("click", async function () {
-      const requestedDate = dateInput.value;
+    function validateDayResult(result, expectedDate) {
+      if (
+        !result ||
+        result.date !== expectedDate ||
+        result.complete !== true
+      ) {
+        throw new Error(
+          "Ngày " + expectedDate +
+          " không đúng ngày yêu cầu hoặc chưa hoàn chỉnh."
+        );
+      }
 
-      clearResults();
+      if (
+        result.validation?.expected_total !== 27 ||
+        result.validation?.actual_total !== 27
+      ) {
+        throw new Error(
+          "Ngày " + expectedDate +
+          " không có đủ 27 kết quả giải."
+        );
+      }
 
-      if (!requestedDate) {
-        readStatus.textContent = "Vui lòng chọn ngày cần đọc.";
+      const prizes = result.prizes;
+
+      if (!prizes || !Array.isArray(result.loto)) {
+        throw new Error(
+          "Ngày " + expectedDate +
+          " thiếu dữ liệu giải hoặc danh sách lô."
+        );
+      }
+
+      for (const [key, expectedCount] of
+        Object.entries(EXPECTED_COUNTS)) {
+
+        if (
+          !Array.isArray(prizes[key]) ||
+          prizes[key].length !== expectedCount ||
+          prizes[key].some(number =>
+            typeof number !== "string" ||
+            !/^\d{2,5}$/.test(number)
+          )
+        ) {
+          throw new Error(
+            "Giải " + key + " ngày " + expectedDate +
+            " không đạt kiểm tra số lượng hoặc định dạng."
+          );
+        }
+      }
+
+      const allPrizeNumbers = Object.values(prizes).flat();
+
+      const reconstructedLoto = allPrizeNumbers.map(number =>
+        number.slice(-2).padStart(2, "0")
+      );
+
+      if (
+        allPrizeNumbers.length !== 27 ||
+        result.loto.length !== 27 ||
+        result.loto.some(number =>
+          typeof number !== "string" ||
+          !/^\d{2}$/.test(number)
+        ) ||
+        reconstructedLoto.some((number, index) =>
+          number !== result.loto[index]
+        )
+      ) {
+        throw new Error(
+          "Danh sách lô ngày " + expectedDate +
+          " không khớp với 27 số giải."
+        );
+      }
+
+      return result;
+    }
+
+    function validateSingleResponse(data, requestedDate) {
+      if (!data || data.ok !== true) {
+        throw new Error(
+          data?.error || "Worker không trả về kết quả thành công."
+        );
+      }
+
+      if (
+        data.requested_date !== requestedDate ||
+        data.date_verified !== true
+      ) {
+        throw new Error("Ngày trả về không khớp ngày đã chọn.");
+      }
+
+      return validateDayResult(data.result, requestedDate);
+    }
+
+    async function fetchJson(endpoint) {
+      const response = await fetch(API_URL + endpoint, {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+        cache: "no-store"
+      });
+
+      let data;
+
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(
+          "Worker trả về JSON không hợp lệ (HTTP " +
+          response.status + ")."
+        );
+      }
+
+      if (!response.ok || data?.ok !== true) {
+        throw new Error(
+          data?.error ||
+          ("Yêu cầu thất bại (HTTP " + response.status + ").")
+        );
+      }
+
+      return data;
+    }
+
+    function validateHistoryEnvelope(data, targetDate) {
+      if (
+        data.requested_date !== targetDate ||
+        data.date_verified !== true ||
+        data.history?.target_date !== targetDate
+      ) {
+        throw new Error(
+          "Ngày mục tiêu trong dữ liệu lịch sử không khớp."
+        );
+      }
+
+      const history = data.history;
+
+      if (
+        history.history_days_requested !== 7 ||
+        !Array.isArray(history.days) ||
+        history.days.length !== 7
+      ) {
+        throw new Error(
+          "Phản hồi lịch sử không chứa đúng 7 ngày."
+        );
+      }
+
+      const validatedDays = [];
+
+      for (let index = 0; index < 7; index++) {
+        const expectedDate = shiftDate(targetDate, -(index + 1));
+        const day = history.days[index];
+
+        if (!day || day.date !== expectedDate) {
+          throw new Error(
+            "Ngày lịch sử không đúng thứ tự. Mong đợi " +
+            expectedDate + "."
+          );
+        }
+
+        if (day.status === "complete") {
+          validateDayResult(day.result, expectedDate);
+
+          validatedDays.push({
+            date: expectedDate,
+            status: "complete",
+            result: day.result
+          });
+        } else {
+          validatedDays.push({
+            date: expectedDate,
+            status: day.status || "invalid",
+            error: day.error || "Ngày chưa hợp lệ."
+          });
+        }
+      }
+
+      const completeCount = validatedDays.filter(
+        day => day.status === "complete"
+      ).length;
+
+      const allComplete =
+        completeCount === 7 &&
+        history.history_days_complete === 7 &&
+        history.all_days_complete === true &&
+        Array.isArray(history.missing_dates) &&
+        history.missing_dates.length === 0 &&
+        Array.isArray(history.incomplete_dates) &&
+        history.incomplete_dates.length === 0;
+
+      return {
+        days: validatedDays,
+        completeCount,
+        allComplete
+      };
+    }
+
+    function showMetric(label, value) {
+      const box = document.createElement("div");
+      box.className = "metric";
+
+      const title = document.createElement("div");
+      title.className = "metric-label";
+      title.textContent = label;
+
+      const number = document.createElement("div");
+      number.className = "metric-value";
+      number.textContent = String(value);
+
+      box.append(title, number);
+      return box;
+    }
+
+    function showHistory(history) {
+      const rows = history.days.map(day => {
+        const statusText = day.status === "complete"
+          ? "Đủ 27/27"
+          : day.status === "not_found"
+            ? "Không tìm thấy"
+            : day.status === "incomplete"
+              ? "Thiếu kết quả"
+              : "Không hợp lệ";
+
+        const lotoText = day.status === "complete"
+          ? day.result.loto.join(" · ")
+          : (day.error || "Không có dữ liệu hợp lệ");
+
+        return [day.date, statusText, lotoText];
+      });
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "table-wrap";
+      wrapper.appendChild(
+        makeTable(
+          ["Ngày", "Trạng thái", "27 lượt lô"],
+          rows
+        )
+      );
+
+      historyResults.replaceChildren(wrapper);
+
+      if (history.allComplete) {
+        setStatus(
+          historyStatus,
+          "HỢP LỆ: đủ 7/7 ngày, mỗi ngày đủ 27 kết quả giải. " +
+          "Phạm vi: " + history.days[6].date +
+          " đến " + history.days[0].date + ".",
+          "success"
+        );
+      } else {
+        setStatus(
+          historyStatus,
+          "CHƯA ĐỦ DỮ LIỆU: mới có " +
+          history.completeCount + "/7 ngày hợp lệ. " +
+          "Bảng dưới đây hiển thị trạng thái từng ngày; " +
+          "thống kê tần suất sẽ không được tính.",
+          "error"
+        );
+      }
+    }
+
+    function calculateFrequency(history) {
+      const stats = Array.from({ length: 100 }, (_, number) => ({
+        number: String(number).padStart(2, "0"),
+        occurrences: 0,
+        days: 0
+      }));
+
+      for (const day of history.days) {
+        const seenToday = new Set();
+
+        for (const number of day.result.loto) {
+          stats[Number(number)].occurrences++;
+          seenToday.add(number);
+        }
+
+        for (const number of seenToday) {
+          stats[Number(number)].days++;
+        }
+      }
+
+      return stats.sort((a, b) =>
+        b.occurrences - a.occurrences ||
+        b.days - a.days ||
+        a.number.localeCompare(b.number)
+      );
+    }
+
+    function showFrequency(history) {
+      if (!history.allComplete) {
+        frequencyResults.replaceChildren();
+
+        setStatus(
+          statsStatus,
+          "KHÔNG TÍNH: cần đủ 7 ngày hợp lệ trước khi thống kê.",
+          "error"
+        );
         return;
       }
 
-      if (requestedDate > localDate) {
-        readStatus.textContent = "Không thể chọn ngày trong tương lai.";
+      const stats = calculateFrequency(history);
+      const totalOccurrences = stats.reduce(
+        (sum, item) => sum + item.occurrences, 0
+      );
+
+      const totalDayHits = stats.reduce(
+        (sum, item) => sum + item.days, 0
+      );
+
+      const metrics = document.createElement("div");
+      metrics.className = "metric-grid";
+      metrics.append(
+        showMetric("Ngày hợp lệ", "7/7"),
+        showMetric("Lượt lô", totalOccurrences),
+        showMetric("Tổng số giải", 189),
+        showMetric("Số lô khác nhau", stats.filter(
+          item => item.occurrences > 0
+        ).length)
+      );
+
+      historyMetrics.replaceChildren(metrics);
+
+      const rows = stats.map(item => [
+        Object.assign(document.createElement("span"), {
+          className: "number",
+          textContent: item.number
+        }),
+        String(item.occurrences),
+        String(item.days)
+      ]);
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "table-wrap";
+      wrapper.appendChild(
+        makeTable(
+          ["Lô 2 số", "Số lượt xuất hiện", "Số ngày xuất hiện"],
+          rows
+        )
+      );
+
+      frequencyResults.replaceChildren(wrapper);
+
+      setStatus(
+        statsStatus,
+        "ĐÃ TÍNH: đủ 7 ngày × 27 lượt = 189 lượt lô. " +
+        "Tổng số ngày xuất hiện của các số là " +
+        totalDayHits +
+        " lượt số-ngày. Bảng gồm đủ 100 số từ 00 đến 99, " +
+        "xếp theo số lượt giảm dần; các số đồng hạng được " +
+        "xếp theo số ngày rồi theo thứ tự số.",
+        "success"
+      );
+
+      const note = document.createElement("p");
+      note.className = "small-note";
+      note.textContent =
+        "Số lượt xuất hiện tính tất cả lần lặp. " +
+        "Số ngày xuất hiện chỉ tính tối đa một lần cho mỗi số trong một ngày. " +
+        "Thống kê mô tả dữ liệu quá khứ, không phải dự đoán.";
+      frequencyResults.appendChild(note);
+    }
+
+    readButton.addEventListener("click", async function () {
+      const targetDate = dateInput.value;
+
+      clearDayResults();
+      clearHistoryResults();
+
+      setStatus(sourceStatus, "Đang kết nối nguồn dữ liệu...");
+
+      if (!targetDate) {
+        setStatus(readStatus, "Vui lòng chọn ngày cần đọc.", "error");
+        return;
+      }
+
+      if (targetDate > localDate) {
+        setStatus(
+          readStatus,
+          "Không thể chọn ngày trong tương lai.",
+          "error"
+        );
         return;
       }
 
       readButton.disabled = true;
       readButton.textContent = "ĐANG ĐỌC...";
-      readStatus.textContent =
-        "Đang yêu cầu dữ liệu ngày " + requestedDate + "...";
+      setStatus(
+        readStatus,
+        "Đang đọc kết quả ngày " + targetDate + "..."
+      );
 
-      sourceStatus.textContent =
-        "Đang kiểm tra ngày, số lượng giải và danh sách lô.";
-
-      historyStatus.textContent =
-        "Chưa tải dữ liệu 7 ngày. Chưa tính thống kê.";
+      let dayReadOK = false;
+      let historyReadOK = false;
+      let dayError = "";
+      let historyError = "";
+      let dayData = null;
+      let historyData = null;
 
       try {
-        const url = API_URL + "/read?date=" +
-          encodeURIComponent(requestedDate);
+        // Đọc ngày mục tiêu và lịch sử bằng hai endpoint riêng.
+        // Lỗi một endpoint không che mất kết quả của endpoint còn lại.
+        const dayPromise = (async () => {
+          const data = await fetchJson(
+            "/read?date=" + encodeURIComponent(targetDate)
+          );
 
-        const response = await fetch(url, {
-          method: "GET",
-          headers: { "Accept": "application/json" },
-          cache: "no-store"
-        });
+          return validateSingleResponse(data, targetDate);
+        })();
 
-        let data;
+        const historyPromise = (async () => {
+          const data = await fetchJson(
+            "/history?date=" + encodeURIComponent(targetDate)
+          );
 
-        try {
-          data = await response.json();
-        } catch {
-          throw new Error(
-            "Worker không trả về JSON hợp lệ (HTTP " +
-            response.status + ")."
+          const history = validateHistoryEnvelope(data, targetDate);
+
+          return { data, history };
+        })();
+
+        const [dayOutcome, historyOutcome] = await Promise.allSettled([
+          dayPromise,
+          historyPromise
+        ]);
+
+        if (dayOutcome.status === "fulfilled") {
+          dayReadOK = true;
+          dayData = dayOutcome.value;
+
+          showLoto(dayData.loto);
+          showPrizes(dayData.prizes);
+
+          setStatus(
+            readStatus,
+            "THÀNH CÔNG: ngày " + targetDate +
+            " có đủ 27 kết quả giải và 27 lượt lô.",
+            "success"
+          );
+        } else {
+          dayError = String(
+            dayOutcome.reason?.message || dayOutcome.reason
+          );
+
+          clearDayResults();
+
+          setStatus(
+            readStatus,
+            "KHÔNG ĐỌC ĐƯỢC ngày mục tiêu: " + dayError,
+            "error"
           );
         }
 
-        if (!response.ok) {
-          throw new Error(
-            data?.error ||
-            ("Không đọc được nguồn (HTTP " + response.status + ").")
+        if (historyOutcome.status === "fulfilled") {
+          historyReadOK = true;
+          historyData = historyOutcome.value.history;
+
+          showHistory(historyData);
+          showFrequency(historyData);
+        } else {
+          historyError = String(
+            historyOutcome.reason?.message ||
+            historyOutcome.reason
+          );
+
+          setStatus(
+            historyStatus,
+            "KHÔNG TẢI ĐƯỢC LỊCH SỬ: " + historyError,
+            "error"
+          );
+
+          setStatus(
+            statsStatus,
+            "Không tính thống kê vì lịch sử chưa được xác minh.",
+            "error"
           );
         }
 
-        const result = validateResponse(data, requestedDate);
+        const sourceMessages = [
+          "Nguồn duy nhất: " + SOURCE_URL,
+          "Ngày mục tiêu: " + targetDate,
+          "Đọc ngày mục tiêu: " +
+            (dayReadOK ? "ĐẠT" : "LỖI"),
+          "Đọc lịch sử 7 ngày: " +
+            (historyReadOK
+              ? historyData.allComplete
+                ? "ĐỦ 7/7 NGÀY"
+                : "CHƯA ĐỦ 7 NGÀY"
+              : "LỖI")
+        ];
 
-        showLoto(result.loto);
-        showPrizes(result.prizes);
+        if (dayError) {
+          sourceMessages.push("Lỗi đọc ngày: " + dayError);
+        }
 
-        readStatus.textContent =
-          "THÀNH CÔNG: đã đọc đúng ngày " + result.date +
-          ", đủ 27 kết quả giải và 27 lượt lô.";
+        if (historyError) {
+          sourceMessages.push("Lỗi lịch sử: " + historyError);
+        }
 
-        sourceStatus.textContent =
-          "Nguồn: " + SOURCE_URL +
-          " | Ngày yêu cầu: " + requestedDate +
-          " | Ngày dữ liệu: " + result.date +
-          " | Kiểm tra: ĐẠT (27/27) | Worker: " +
-          (data.worker || "xsmb-v1-reader") +
-          ". Việc này xác nhận cấu trúc và tính nhất quán dữ liệu; " +
-          "chưa thay thế đối chiếu độc lập với bảng kết quả gốc.";
+        sourceMessages.push(
+          "Kiểm tra cấu trúc không thay thế đối chiếu độc lập " +
+          "với kết quả xổ số gốc."
+        );
 
-        historyStatus.textContent =
-          "Chưa tải dữ liệu 7 ngày. Hiện mới đọc ngày " +
-          result.date +
-          "; chưa tính tần suất, tỷ lệ khớp hoặc dự đoán.";
+        setStatus(
+          sourceStatus,
+          sourceMessages.join(" | "),
+          dayReadOK && historyReadOK &&
+          historyData.allComplete ? "success" : ""
+        );
 
       } catch (error) {
-        clearResults();
-
-        readStatus.textContent =
-          "KHÔNG ĐỌC ĐƯỢC: " +
-          String(error?.message || error);
-
-        sourceStatus.textContent =
-          "Không có dữ liệu nào được chấp nhận cho ngày " +
-          requestedDate +
-          ". Nguồn: " + SOURCE_URL +
-          ". Hãy kiểm tra thông báo lỗi trước khi thử lại.";
-
-        historyStatus.textContent =
-          "Chưa có dữ liệu lịch sử được xác minh. Không tính thống kê.";
+        setStatus(
+          sourceStatus,
+          "Lỗi xử lý: " + String(error?.message || error),
+          "error"
+        );
       } finally {
         readButton.disabled = false;
         readButton.textContent = "ĐỌC NGUỒN";
