@@ -1,757 +1,90 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>XSMB V1 - Tra cứu vị trí cặp số</title>
-
-  <style>
-    :root {
-      --primary: #174ea6;
-      --background: #f3f6fb;
-      --border: #dce3ed;
-      --text: #182230;
-      --muted: #64748b;
-      --success: #166534;
-      --danger: #b91c1c;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      background: var(--background);
-      color: var(--text);
-      font-family: Arial, Helvetica, sans-serif;
-    }
-
-    .container {
-      width: min(1200px, 100%);
-      margin: auto;
-      padding: 24px 16px 48px;
-    }
-
-    header, .panel {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 22px;
-      margin-bottom: 18px;
-    }
-
-    .eyebrow {
-      color: var(--primary);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 1px;
-    }
-
-    h1 {
-      font-size: clamp(24px, 5vw, 34px);
-      margin: 10px 0;
-    }
-
-    h2 {
-      font-size: 19px;
-      margin: 0 0 16px;
-    }
-
-    .subtitle, .note {
-      color: var(--muted);
-      line-height: 1.6;
-    }
-
-    .controls {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 14px;
-      align-items: end;
-    }
-
-    label {
-      display: block;
-      font-size: 14px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
-    input, select {
-      width: 100%;
-      min-height: 46px;
-      padding: 10px 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 9px;
-      background: #fff;
-      color: var(--text);
-      font-size: 16px;
-    }
-
-    button {
-      width: 100%;
-      min-height: 48px;
-      border: 0;
-      border-radius: 9px;
-      background: var(--primary);
-      color: white;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: .6;
-      cursor: wait;
-    }
-
-    .status {
-      padding: 13px 14px;
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      background: #f8fafc;
-      color: #475569;
-      font-size: 14px;
-      line-height: 1.6;
-      overflow-wrap: anywhere;
-      margin-top: 16px;
-    }
-
-    .status.success {
-      background: #f0fdf4;
-      border-color: #bbf7d0;
-      color: var(--success);
-    }
-
-    .status.error {
-      background: #fef2f2;
-      border-color: #fecaca;
-      color: var(--danger);
-    }
-
-    .source {
-      margin-top: 16px;
-      font-size: 14px;
-      line-height: 1.7;
-      overflow-wrap: anywhere;
-    }
-
-    a { color: var(--primary); }
-
-    .table-wrap {
-      width: 100%;
-      overflow-x: auto;
-      margin-top: 14px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-
-    th, td {
-      padding: 11px 9px;
-      border-bottom: 1px solid var(--border);
-      text-align: left;
-      vertical-align: top;
-      overflow-wrap: anywhere;
-    }
-
-    th {
-      background: #f8fafc;
-      white-space: nowrap;
-    }
-
-    .pair {
-      color: var(--primary);
-      font-weight: 700;
-      font-size: 17px;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .location {
-      margin-bottom: 7px;
-      line-height: 1.6;
-    }
-
-    .location:last-child { margin-bottom: 0; }
-
-    .empty {
-      padding: 20px;
-      border: 1px dashed #cbd5e1;
-      border-radius: 9px;
-      color: var(--muted);
-      line-height: 1.7;
-    }
-
-    .count {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 6px;
-      background: #e8f0fe;
-      color: var(--primary);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    footer {
-      text-align: center;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.7;
-      padding: 12px;
-    }
-
-    @media (min-width: 700px) {
-      .controls {
-        grid-template-columns: 1.2fr .8fr 1fr;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XSMB V1 - Top 10 cặp số</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 0 auto;
+        }
+        h1 {
+            color: #d9534f;
+            text-align: center;
+            border-bottom: 2px solid #d9534f;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #337ab7;
+            margin-top: 20px;
+        }
+        .btn-action {
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-action:hover {
+            background-color: #4cae4c;
+        }
+        .status-box {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            color: #666;
+        }
+        .note {
+            font-size: 0.9em;
+            color: #777;
+            font-style: italic;
+        }
+    </style>
 </head>
-
 <body>
-  <main class="container">
-    <header>
-      <div class="eyebrow">XSMB · PAIR EXTRACTOR</div>
-      <h1>Tra cứu cặp số và vị trí</h1>
-      <p class="subtitle">
-        Trích xuất các cặp 2 chữ số liền nhau từ kết quả các giải.
-        Hiển thị số gốc, tên giải và vị trí để kiểm tra trực tiếp.
-        Không chấm điểm, không xếp hạng.
-      </p>
-    </header>
 
-    <section class="panel">
-      <h2>1. Chọn ngày và lịch sử</h2>
+<div class="container">
+    <h1>XSMB V1 - Top 10 cặp số</h1>
+    <p style="text-align: center; font-weight: bold;">XSMB · TOP 10 PAIR MATCHER</p>
 
-      <div class="controls">
-        <div>
-          <label for="targetDate">Ngày mục tiêu</label>
-          <input type="date" id="targetDate">
-        </div>
+    <h2># Top 10 nhóm cặp số và vị trí</h2>
+    <p>Ứng dụng thống kê cặp từ ngày trước đó 2 ngày, gộp cặp đảo chiều, chọn 10 nhóm xuất hiện nhiều nhất rồi đối chiếu với 2 chữ số cuối của từng giải từ ĐB đến G6 trong ngày liền trước ngày mục tiêu.</p>
 
-        <div>
-          <label for="historyDays">Số ngày lịch sử</label>
-          <select id="historyDays">
-            <option value="4">4 ngày</option>
-            <option value="5">5 ngày</option>
-            <option value="6" selected>6 ngày</option>
-          </select>
-        </div>
+    <h2>1. Chọn ngày cần lấy số</h2>
+    <label for="target-date">Ngày mục tiêu:</label>
+    <input type="date" id="target-date" name="target-date">
+    <button class="btn-action">ĐỌC NGUỒN</button>
+    
+    <p class="note">Ví dụ chọn 19/10: ngày nguồn là 17/10, ngày đối chiếu là 18/10. Khi trích cặp từ số gốc 12345, chỉ lấy 12, 23, 34; bỏ 45. Giải G7 bị loại khỏi thuật toán.</p>
+    <p><strong>Nguồn dữ liệu:</strong> <a href="https://ketqua16.net" target="_blank">ketqua16.net/so-ket-qua</a></p>
 
-        <button id="readButton" type="button">ĐỌC NGUỒN</button>
-      </div>
+    <h2>2. Top 10 nhóm cặp sau khi đối chiếu</h2>
+    <div class="status-box">Chưa có dữ liệu. Kết quả sẽ xuất hiện tại đây sau khi đọc nguồn thành công.</div>
 
-      <p class="note">
-        Worker trả về tối đa 7 ngày trước ngày mục tiêu.
-        Ngày gần nhất trong lịch sử là ngày lấy cặp số đầu ra;
-        lựa chọn 4, 5 hoặc 6 ngày là số ngày trước đó dùng để
-        tra cứu những lần xuất hiện của các cặp này.
-      </p>
+    <h2>3. Xác minh ngày nguồn và ngày đối chiếu</h2>
+    <div class="status-box">Chưa tải dữ liệu.</div>
 
-      <div class="source">
-        <strong>Nguồn dữ liệu:</strong><br>
-        <a href="https://ketqua16.net/so-ket-qua"
-           target="_blank" rel="noopener noreferrer">
-          https://ketqua16.net/so-ket-qua
-        </a>
-      </div>
+    <h2>4. Trạng thái nguồn</h2>
+    <div class="status-box">Chưa đọc dữ liệu.</div>
 
-      <div class="status" id="readStatus" role="status" aria-live="polite">
-        Chọn ngày và số ngày lịch sử, sau đó nhấn ĐỌC NGUỒN.
-      </div>
-    </section>
+    <hr style="margin-top: 30px; border: 0; border-top: 1px solid #eee;">
+    <p class="note" style="text-align: center;">XSMB V1 · Chỉ hiển thị các số lấy từ nguồn đã xác minh; không tự tạo số.</p>
+</div>
 
-    <section class="panel">
-      <h2>2. Các cặp số và vị trí tìm thấy</h2>
-      <div id="resultInfo" class="note">
-        Chưa có dữ liệu.
-      </div>
-      <div id="pairResults" class="empty">
-        Kết quả sẽ xuất hiện tại đây sau khi đọc nguồn thành công.
-      </div>
-    </section>
-
-    <section class="panel">
-      <h2>3. Ngày lịch sử được sử dụng</h2>
-      <div id="historyInfo" class="status">
-        Chưa tải lịch sử.
-      </div>
-      <div id="historyResults"></div>
-    </section>
-
-    <section class="panel">
-      <h2>4. Trạng thái nguồn</h2>
-      <div id="sourceStatus" class="status">
-        Chưa đọc dữ liệu.
-      </div>
-    </section>
-
-    <footer>
-      XSMB V1 · Hiển thị dấu vết dữ liệu để người dùng tự kiểm tra.
-    </footer>
-  </main>
-
-  <script src="./xsmb-v1-algorithm.js"></script>
-
-  <script>
-    "use strict";
-
-    const API_URL =
-      "https://xsmb-v1-reader.czcaonguyen.workers.dev";
-
-    const SOURCE_URL =
-      "https://ketqua16.net/so-ket-qua";
-
-    const dateInput = document.getElementById("targetDate");
-    const historyDaysInput = document.getElementById("historyDays");
-    const readButton = document.getElementById("readButton");
-    const readStatus = document.getElementById("readStatus");
-    const resultInfo = document.getElementById("resultInfo");
-    const pairResults = document.getElementById("pairResults");
-    const historyInfo = document.getElementById("historyInfo");
-    const historyResults = document.getElementById("historyResults");
-    const sourceStatus = document.getElementById("sourceStatus");
-
-    const EXPECTED_COUNTS = {
-      DB: 1, G1: 1, G2: 2, G3: 6,
-      G4: 4, G5: 6, G6: 3, G7: 4
-    };
-
-    const PRIZE_NAMES = {
-      DB: "Đặc biệt",
-      G1: "Giải nhất",
-      G2: "Giải nhì",
-      G3: "Giải ba",
-      G4: "Giải tư",
-      G5: "Giải năm",
-      G6: "Giải sáu",
-      G7: "Giải bảy"
-    };
-
-    const now = new Date();
-    const localDate = [
-      now.getFullYear(),
-      String(now.getMonth() + 1).padStart(2, "0"),
-      String(now.getDate()).padStart(2, "0")
-    ].join("-");
-
-    dateInput.value = localDate;
-    dateInput.max = localDate;
-
-    function shiftDate(date, amount) {
-      const d = new Date(date + "T00:00:00Z");
-      d.setUTCDate(d.getUTCDate() + amount);
-      return d.toISOString().slice(0, 10);
-    }
-
-    function setStatus(element, message, type = "") {
-      element.textContent = message;
-      element.className = "status" + (type ? " " + type : "");
-    }
-
-    function makeTable(headers, rows) {
-      const table = document.createElement("table");
-      const thead = document.createElement("thead");
-      const headerRow = document.createElement("tr");
-
-      headers.forEach(text => {
-        const th = document.createElement("th");
-        th.textContent = text;
-        headerRow.appendChild(th);
-      });
-
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
-
-      const tbody = document.createElement("tbody");
-
-      rows.forEach(values => {
-        const tr = document.createElement("tr");
-
-        values.forEach(value => {
-          const td = document.createElement("td");
-
-          if (value instanceof Node) {
-            td.appendChild(value);
-          } else {
-            td.textContent = String(value);
-          }
-
-          tr.appendChild(td);
-        });
-
-        tbody.appendChild(tr);
-      });
-
-      table.appendChild(tbody);
-      return table;
-    }
-
-    function makeLocation(item) {
-      const div = document.createElement("div");
-      div.className = "location";
-
-      const prize = PRIZE_NAMES[item.prize] || item.prize;
-
-      div.textContent =
-        item.date + " · " +
-        prize + " · Lần " + item.resultIndex +
-        " · Số gốc " + item.sourceValue +
-        " · Vị trí " + item.positionStart +
-        "–" + item.positionEnd;
-
-      return div;
-    }
-
-    function validateDayResult(result, expectedDate) {
-      if (
-        !result ||
-        result.date !== expectedDate ||
-        result.complete !== true
-      ) {
-        throw new Error(
-          "Ngày " + expectedDate +
-          " không đúng ngày yêu cầu hoặc chưa hoàn chỉnh."
-        );
-      }
-
-      const prizes = result.prizes;
-
-      if (!prizes || typeof prizes !== "object") {
-        throw new Error("Thiếu bảng kết quả giải ngày " + expectedDate);
-      }
-
-      for (const [key, count] of Object.entries(EXPECTED_COUNTS)) {
-        const values = prizes[key];
-
-        if (
-          !Array.isArray(values) ||
-          values.length !== count ||
-          values.some(value =>
-            typeof value !== "string" ||
-            !/^\d{2,5}$/.test(value)
-          )
-        ) {
-          throw new Error(
-            "Giải " + key + " ngày " + expectedDate +
-            " không vượt qua kiểm tra định dạng."
-          );
-        }
-      }
-
-      if (
-        !Array.isArray(result.loto) ||
-        result.loto.length !== 27 ||
-        result.loto.some(value =>
-          typeof value !== "string" ||
-          !/^\d{2}$/.test(value)
-        )
-      ) {
-        throw new Error(
-          "Danh sách lô ngày " + expectedDate +
-          " không đủ 27 số hoặc sai định dạng."
-        );
-      }
-
-      const reconstructed = Object.values(prizes)
-        .flat()
-        .map(value => value.slice(-2));
-
-      if (
-        reconstructed.length !== 27 ||
-        reconstructed.some((value, index) =>
-          value !== result.loto[index]
-        )
-      ) {
-        throw new Error(
-          "Danh sách lô không khớp với kết quả các giải ngày " +
-          expectedDate + "."
-        );
-      }
-
-      return result;
-    }
-
-    async function fetchJson(endpoint) {
-      const response = await fetch(API_URL + endpoint, {
-        method: "GET",
-        headers: { "Accept": "application/json" },
-        cache: "no-store"
-      });
-
-      let data;
-
-      try {
-        data = await response.json();
-      } catch {
-        throw new Error(
-          "Phản hồi không phải JSON hợp lệ (HTTP " +
-          response.status + ")."
-        );
-      }
-
-      if (!response.ok || data?.ok !== true) {
-        throw new Error(
-          data?.error ||
-          ("Yêu cầu thất bại (HTTP " + response.status + ").")
-        );
-      }
-
-      return data;
-    }
-
-    function validateHistory(data, targetDate) {
-      const history = data.history;
-
-      if (!history || !Array.isArray(history.days)) {
-        throw new Error("Không tìm thấy history.days trong dữ liệu Worker.");
-      }
-
-      if (
-        data.requested_date !== targetDate ||
-        data.date_verified !== true ||
-        history.target_date !== targetDate
-      ) {
-        throw new Error("Ngày mục tiêu trong phản hồi không khớp.");
-      }
-
-      if (
-        history.history_days_requested !== 7 ||
-        history.days.length !== 7
-      ) {
-        throw new Error(
-          "Worker chưa trả về đúng 7 ngày lịch sử như giao diện yêu cầu."
-        );
-      }
-
-      const days = history.days.map((day, index) => {
-        const expectedDate = shiftDate(targetDate, -(index + 1));
-
-        if (!day || day.date !== expectedDate) {
-          throw new Error(
-            "Thứ tự ngày lịch sử sai. Mong đợi " + expectedDate + "."
-          );
-        }
-
-        if (day.status !== "complete") {
-          throw new Error(
-            "Ngày " + expectedDate + " chưa hoàn chỉnh: " +
-            (day.error || day.status || "không rõ nguyên nhân")
-          );
-        }
-
-        const result = validateDayResult(day.result, expectedDate);
-
-        return {
-          date: expectedDate,
-          complete: true,
-          result
-        };
-      });
-
-      return days;
-    }
-
-    function renderPairs(report) {
-      const rows = report.uniquePairs.map(record => {
-        const sourceLocations = document.createElement("div");
-
-        record.sourceOccurrences.forEach(item => {
-          sourceLocations.appendChild(makeLocation(item));
-        });
-
-        const historyLocations = document.createElement("div");
-
-        if (record.historyOccurrences.length) {
-          record.historyOccurrences.forEach(item => {
-            historyLocations.appendChild(makeLocation(item));
-          });
-        } else {
-          historyLocations.textContent =
-            "Không xuất hiện trong phạm vi lịch sử đã chọn.";
-        }
-
-        const pairCell = document.createElement("span");
-        pairCell.className = "pair";
-        pairCell.textContent = record.pair;
-
-        const countCell = document.createElement("span");
-        countCell.className = "count";
-        countCell.textContent =
-          record.sourceOccurrences.length + " vị trí";
-
-        return [
-          pairCell,
-          countCell,
-          sourceLocations,
-          historyLocations
-        ];
-      });
-
-      if (!rows.length) {
-        pairResults.className = "empty";
-        pairResults.textContent = "Không trích xuất được cặp số.";
-        return;
-      }
-
-      const wrapper = document.createElement("div");
-      wrapper.className = "table-wrap";
-
-      wrapper.appendChild(makeTable(
-        [
-          "Cặp số",
-          "Số vị trí tại ngày nguồn",
-          "Vị trí trong ngày nguồn",
-          "Các vị trí cùng cặp trong lịch sử"
-        ],
-        rows
-      ));
-
-      pairResults.className = "";
-      pairResults.replaceChildren(wrapper);
-
-      resultInfo.textContent =
-        "Ngày lấy cặp số: " + report.latestDate +
-        " · Lịch sử tra cứu: " + report.historyDays +
-        " ngày · Số cặp khác nhau: " + report.uniquePairs.length +
-        " · Tổng vị trí cặp: " + report.sourcePairs.length + ".";
-    }
-
-    function renderHistoryDays(days, selectedDays) {
-      const selected = days.slice(1, selectedDays + 1);
-
-      const rows = selected.map(day => [
-        day.date,
-        "Đủ 27 kết quả",
-        "Đã xác minh cấu trúc"
-      ]);
-
-      const wrapper = document.createElement("div");
-      wrapper.className = "table-wrap";
-      wrapper.appendChild(makeTable(
-        ["Ngày", "Trạng thái", "Kiểm tra"],
-        rows
-      ));
-
-      historyResults.replaceChildren(wrapper);
-
-      setStatus(
-        historyInfo,
-        "Đã chọn " + selectedDays +
-        " ngày trước ngày nguồn " + days[0].date +
-        ". Các ngày được liệt kê bên dưới dùng để tra cứu vị trí cặp số.",
-        "success"
-      );
-    }
-
-    readButton.addEventListener("click", async () => {
-      const targetDate = dateInput.value;
-      const selectedDays = Number(historyDaysInput.value);
-
-      pairResults.className = "empty";
-      pairResults.textContent = "Đang đọc dữ liệu...";
-      resultInfo.textContent = "Đang xử lý...";
-      historyResults.replaceChildren();
-
-      if (!targetDate) {
-        setStatus(readStatus, "Vui lòng chọn ngày mục tiêu.", "error");
-        return;
-      }
-
-      if (targetDate > localDate) {
-        setStatus(readStatus, "Không thể chọn ngày trong tương lai.", "error");
-        return;
-      }
-
-      if (![4, 5, 6].includes(selectedDays)) {
-        setStatus(readStatus, "Chỉ được chọn 4, 5 hoặc 6 ngày.", "error");
-        return;
-      }
-
-      if (!window.XSMBAlgorithm ||
-          typeof window.XSMBAlgorithm.analyze !== "function") {
-        setStatus(
-          readStatus,
-          "Không nạp được xsmb-v1-algorithm.js. " +
-          "Kiểm tra tệp trong repo và tải lại trang.",
-          "error"
-        );
-        pairResults.textContent = "Chưa có kết quả.";
-        return;
-      }
-
-      readButton.disabled = true;
-      readButton.textContent = "ĐANG ĐỌC...";
-
-      setStatus(
-        readStatus,
-        "Đang tải lịch sử từ Worker và kiểm tra dữ liệu..."
-      );
-
-      try {
-        const data = await fetchJson(
-          "/history?date=" + encodeURIComponent(targetDate)
-        );
-
-        const days = validateHistory(data, targetDate);
-
-        /*
-         * API sắp ngày từ gần nhất đến xa nhất.
-         * Sắp tăng dần trước khi chuyển cho thuật toán.
-         * Thuật toán sẽ dùng ngày mới nhất làm ngày trích xuất.
-         */
-        const chronologicalDays = [...days].reverse();
-
-        const analysisInput = {
-          history: {
-            days: chronologicalDays
-          }
-        };
-
-        const report = window.XSMBAlgorithm.analyze(
-          analysisInput,
-          { historyDays: selectedDays }
-        );
-
-        renderPairs(report);
-        renderHistoryDays(days, selectedDays);
-
-        setStatus(
-          readStatus,
-          "ĐỌC THÀNH CÔNG: đã xác minh 7/7 ngày lịch sử. " +
-          "Đã trích xuất cặp số từ ngày " + report.latestDate +
-          " và tra cứu " + selectedDays + " ngày lịch sử.",
-          "success"
-        );
-
-        setStatus(
-          sourceStatus,
-          "Nguồn Worker: " + API_URL +
-          " · Nguồn kết quả: " + SOURCE_URL +
-          " · Ngày mục tiêu: " + targetDate +
-          " · Ngày trích xuất: " + report.latestDate +
-          " · Thuật toán: " + report.version,
-          "success"
-        );
-
-      } catch (error) {
-        const message = String(error?.message || error);
-
-        setStatus(readStatus, "KHÔNG THỂ XỬ LÝ: " + message, "error");
-        setStatus(historyInfo, "Không thể xác minh lịch sử.", "error");
-        setStatus(sourceStatus, message, "error");
-
-        resultInfo.textContent = "Không có kết quả được xác minh.";
-        pairResults.className = "empty";
-        pairResults.textContent =
-          "Không hiển thị cặp số vì dữ liệu chưa vượt qua kiểm tra.";
-      } finally {
-        readButton.disabled = false;
-        readButton.textContent = "ĐỌC NGUỒN";
-      }
-    });
-  </script>
 </body>
 </html>
