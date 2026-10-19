@@ -1,90 +1,272 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XSMB V1 - Top 10 cặp số</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 20px;
-            background-color: #f9f9f9;
-            color: #333;
-        }
-        .container {
-            max-width: 800px;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin: 0 auto;
-        }
-        h1 {
-            color: #d9534f;
-            text-align: center;
-            border-bottom: 2px solid #d9534f;
-            padding-bottom: 10px;
-        }
-        h2 {
-            color: #337ab7;
-            margin-top: 20px;
-        }
-        .btn-action {
-            background-color: #5cb85c;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .btn-action:hover {
-            background-color: #4cae4c;
-        }
-        .status-box {
-            background-color: #f5f5f5;
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 4px;
-            color: #666;
-        }
-        .note {
-            font-size: 0.9em;
-            color: #777;
-            font-style: italic;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XSMB V1 - Top 10 cặp số</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 20px;
+      background: #f5f6f8;
+      color: #222;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+    }
+    h1 { color: #b42318; text-align: center; }
+    h2 { color: #175ea8; margin-top: 24px; }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 5px 0;
+    }
+    button {
+      background: #198754;
+      color: white;
+      border: 0;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    .status {
+      padding: 12px;
+      background: #f1f3f5;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .error { color: #b42318; }
+    .success { color: #146c43; }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 12px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #edf2f7; }
+    .small { color: #666; font-size: 14px; }
+    @media (max-width: 650px) {
+      .container { padding: 12px; }
+      table { font-size: 13px; }
+      th, td { padding: 5px; }
+    }
+  </style>
 </head>
 <body>
-
 <div class="container">
-    <h1>XSMB V1 - Top 10 cặp số</h1>
-    <p style="text-align: center; font-weight: bold;">XSMB · TOP 10 PAIR MATCHER</p>
+  <h1>XSMB V1 - TOP 10 CẶP SỐ</h1>
+  <p>Thống kê dữ liệu thực tế từ ketqua16.net.</p>
 
-    <h2># Top 10 nhóm cặp số và vị trí</h2>
-    <p>Ứng dụng thống kê cặp từ ngày trước đó 2 ngày, gộp cặp đảo chiều, chọn 10 nhóm xuất hiện nhiều nhất rồi đối chiếu với 2 chữ số cuối của từng giải từ ĐB đến G6 trong ngày liền trước ngày mục tiêu.</p>
+  <h2>1. Chọn ngày mục tiêu</h2>
+  <label for="target-date">Ngày cần phân tích:</label><br>
+  <input type="date" id="target-date">
+  <button id="read-button" type="button">ĐỌC NGUỒN</button>
 
-    <h2>1. Chọn ngày cần lấy số</h2>
-    <label for="target-date">Ngày mục tiêu:</label>
-    <input type="date" id="target-date" name="target-date">
-    <button class="btn-action">ĐỌC NGUỒN</button>
-    
-    <p class="note">Ví dụ chọn 19/10: ngày nguồn là 17/10, ngày đối chiếu là 18/10. Khi trích cặp từ số gốc 12345, chỉ lấy 12, 23, 34; bỏ 45. Giải G7 bị loại khỏi thuật toán.</p>
-    <p><strong>Nguồn dữ liệu:</strong> <a href="https://ketqua16.net" target="_blank">ketqua16.net/so-ket-qua</a></p>
+  <p class="small">
+    Ngày nguồn = ngày mục tiêu trừ 2 ngày.
+    Ngày đối chiếu = ngày mục tiêu trừ 1 ngày.
+    Chỉ dùng ĐB đến G6; loại G7.
+    Với số gốc 12345, chỉ trích 12, 23, 34; bỏ 45.
+    Cặp đảo chiều được gộp chung khi xếp hạng.
+  </p>
 
-    <h2>2. Top 10 nhóm cặp sau khi đối chiếu</h2>
-    <div class="status-box">Chưa có dữ liệu. Kết quả sẽ xuất hiện tại đây sau khi đọc nguồn thành công.</div>
+  <h2>2. Kết quả</h2>
+  <div id="result" class="status">Chưa đọc dữ liệu.</div>
 
-    <h2>3. Xác minh ngày nguồn và ngày đối chiếu</h2>
-    <div class="status-box">Chưa tải dữ liệu.</div>
+  <h2>3. Xác minh dữ liệu</h2>
+  <div id="details" class="status">Chưa tải dữ liệu.</div>
 
-    <h2>4. Trạng thái nguồn</h2>
-    <div class="status-box">Chưa đọc dữ liệu.</div>
+  <h2>4. Trạng thái nguồn</h2>
+  <div id="source-status" class="status">Đang chờ thao tác.</div>
 
-    <hr style="margin-top: 30px; border: 0; border-top: 1px solid #eee;">
-    <p class="note" style="text-align: center;">XSMB V1 · Chỉ hiển thị các số lấy từ nguồn đã xác minh; không tự tạo số.</p>
+  <p class="small">
+    Không tự tạo số. Nếu thiếu dữ liệu hoặc sai định dạng,
+    ứng dụng sẽ báo lỗi.
+  </p>
 </div>
 
+<script src="./xsmb-v1-algorithm.js"></script>
+<script>
+"use strict";
+
+const WORKER_URL =
+  "https://xsmb-v1-reader.czcaonguyen.workers.dev/";
+
+const dateInput = document.getElementById("target-date");
+const readButton = document.getElementById("read-button");
+const resultBox = document.getElementById("result");
+const detailsBox = document.getElementById("details");
+const sourceBox = document.getElementById("source-status");
+
+function showError(element, message) {
+  element.className = "status error";
+  element.textContent = message;
+}
+
+function showText(element, message, success = false) {
+  element.className = "status" + (success ? " success" : "");
+  element.textContent = message;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+function formatDate(date) {
+  if (!date) return "Không rõ";
+  const parts = date.split("-");
+  return parts.length === 3
+    ? `${parts[2]}/${parts[1]}/${parts[0]}`
+    : date;
+}
+
+function renderAnalysis(analysis) {
+  if (!analysis || !Array.isArray(analysis.top10)) {
+    throw new Error("Thuật toán không trả về danh sách Top 10 hợp lệ.");
+  }
+
+  const rows = analysis.top10.map(item => {
+    const source = item.sourceOccurrences.map(o =>
+      `${o.prize} ${o.sourceValue} → ${o.pair}`
+    ).join("; ");
+
+    const matches = item.comparisonOccurrences.map(o =>
+      `${o.prize} ${o.sourceValue} (đuôi ${o.tail})`
+    ).join("; ");
+
+    return `<tr>
+      <td>${item.rank}</td>
+      <td><strong>${escapeHtml(item.label)}</strong></td>
+      <td>${item.frequency}</td>
+      <td>${item.matched ? "Có" : "Không"}</td>
+      <td>${item.matchCount}</td>
+      <td>${escapeHtml(source || "Không có")}</td>
+      <td>${escapeHtml(matches || "Không khớp")}</td>
+    </tr>`;
+  }).join("");
+
+  resultBox.className = "status";
+  resultBox.innerHTML = `
+    <p><strong>Ngày nguồn:</strong> ${formatDate(analysis.sourceDate)}</p>
+    <p><strong>Ngày đối chiếu:</strong> ${formatDate(analysis.compareDate)}</p>
+    <p><strong>Tổng lượt cặp được trích:</strong> ${analysis.totalSourceOccurrences}</p>
+    <p><strong>Số nhóm cặp khác nhau:</strong> ${analysis.uniqueGroupCount}</p>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th>Hạng</th><th>Nhóm cặp</th><th>Tần suất</th>
+          <th>Khớp?</th><th>Số lượt khớp</th>
+          <th>Vị trí ngày nguồn</th><th>Kết quả đối chiếu</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+
+  showText(detailsBox,
+    `Ngày mục tiêu: ${formatDate(analysis.targetDate)}\n` +
+    `Ngày nguồn: ${formatDate(analysis.sourceDate)}\n` +
+    `Ngày đối chiếu: ${formatDate(analysis.compareDate)}\n` +
+    `Các giải dùng để thống kê: ${analysis.sourcePrizeOrder.join(", ")}\n` +
+    `Phiên bản thuật toán: ${analysis.version}`,
+    true
+  );
+}
+
+async function readSource() {
+  const targetDate = dateInput.value;
+
+  if (!targetDate) {
+    showError(sourceBox, "Vui lòng chọn ngày mục tiêu.");
+    return;
+  }
+
+  if (!window.XSMBAlgorithm ||
+      typeof window.XSMBAlgorithm.analyze !== "function") {
+    showError(sourceBox,
+      "Không nạp được xsmb-v1-algorithm.js. " +
+      "Kiểm tra file trong repository và tải lại trang.");
+    return;
+  }
+
+  readButton.disabled = true;
+  showText(resultBox, "Đang phân tích dữ liệu...");
+  showText(detailsBox, "Đang chờ dữ liệu từ Worker...");
+  showText(sourceBox, "Đang gọi Worker đọc nguồn ketqua16.net...");
+
+  try {
+    const url = new URL(WORKER_URL);
+    url.searchParams.set("date", targetDate);
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+      cache: "no-store"
+    });
+
+    const body = await response.text();
+
+    if (!response.ok) {
+      throw new Error(`Worker HTTP ${response.status}: ${body.slice(0, 500)}`);
+    }
+
+    let data;
+    try {
+      data = JSON.parse(body);
+    } catch {
+      throw new Error(
+        "Worker không trả JSON hợp lệ. Nội dung nhận được: " +
+        body.slice(0, 300)
+      );
+    }
+
+    if (data.error || data.status === "ERROR") {
+      throw new Error(data.error || data.message || "Worker báo lỗi.");
+    }
+
+    const analysis = window.XSMBAlgorithm.analyze(data, { targetDate });
+    renderAnalysis(analysis);
+
+    showText(sourceBox,
+      `Đọc nguồn thành công.\n` +
+      `Worker: ${data.version || "Không có thông tin phiên bản"}\n` +
+      `Thuật toán: ${window.XSMBAlgorithm.version}\n` +
+      `Ngày yêu cầu: ${targetDate}`,
+      true
+    );
+  } catch (error) {
+    showError(resultBox, "Không thể tạo kết quả.");
+    showError(detailsBox, "Chưa xác minh được dữ liệu.");
+    showError(sourceBox,
+      "Lỗi: " + (error && error.message
+        ? error.message
+        : String(error)) +
+      "\nKhông tạo số thay thế. Hãy gửi nguyên thông báo này để kiểm tra."
+    );
+  } finally {
+    readButton.disabled = false;
+  }
+}
+
+readButton.addEventListener("click", readSource);
+</script>
 </body>
 </html>
