@@ -67,21 +67,21 @@
 </head>
 <body>
 <div class="container">
-  <h1>XSMB V1 - TOP 10 CẶP SỐ</h1>
-  <p>Thống kê dữ liệu thực tế từ ketqua16.net.</p>
+  <h1>XSMB V1 - CẶP SỐ THEO VỊ TRÍ</h1>
+<p>Phân tích dữ liệu thực tế từ ketqua16.net.</p>
 
-  <h2>1. Chọn ngày mục tiêu</h2>
-  <label for="target-date">Ngày cần phân tích:</label><br>
-  <input type="date" id="target-date">
-  <button id="read-button" type="button">ĐỌC NGUỒN</button>
+<h2>1. Chọn ngày mục tiêu</h2>
+<label for="target-date">Ngày cần phân tích:</label><br>
+<input type="date" id="target-date">
+<button id="read-button" type="button">ĐỌC NGUỒN</button>
 
-  <p class="small">
-    Ngày nguồn = ngày mục tiêu trừ 2 ngày.
-    Ngày đối chiếu = ngày mục tiêu trừ 1 ngày.
-    Chỉ dùng ĐB đến G6; loại G7.
-    Với số gốc 12345, chỉ trích 12, 23, 34; bỏ 45.
-    Cặp đảo chiều được gộp chung khi xếp hạng.
-  </p>
+<p class="small">
+  Ngày mục tiêu N dùng để xác định các mẫu vị trí và kiểm tra kết quả thực tế.
+  Áp dụng đúng các vị trí đó lên ngày N−1 để tạo cặp số.
+  Đối chiếu với đuôi 2 số của tất cả giải từ ĐB đến G7 trong ngày N.
+  Chỉ giữ các cặp khớp; gộp cặp đảo chiều khi trình bày nhưng giữ nguyên
+  từng vị trí tạo cặp. Không xếp hạng Top 10 theo tần suất.
+</p>
 
   <h2>2. Kết quả</h2>
   <div id="result" class="status">Chưa đọc dữ liệu.</div>
