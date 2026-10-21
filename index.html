@@ -144,7 +144,8 @@ function renderAnalysis(analysis) {
     throw new Error("Thuật toán không trả về danh sách Top 10 hợp lệ.");
   }
 
-  const source = item.sourceOccurrences.map(o =>
+  
+const source = item.sourceOccurrences.map(o =>
   `${o.left.prize} ${o.left.sourceValue}[vị trí ${o.left.digitPosition}] + ` +
   `${o.right.prize} ${o.right.sourceValue}[vị trí ${o.right.digitPosition}] → ${o.pair}`
 ).join("; ");
