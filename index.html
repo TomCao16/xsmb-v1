@@ -168,7 +168,7 @@ function renderAnalysis(analysis) {
   resultBox.innerHTML = `
     <p><strong>Ngày nguồn:</strong> ${formatDate(analysis.sourceDate)}</p>
     <p><strong>Ngày đối chiếu:</strong> ${formatDate(analysis.compareDate)}</p>
-    <p><strong>Tổng lượt cặp được trích:</strong> ${analysis.totalSourceOccurrences}</p>
+    <p><strong>Tổng lượt cặp được trích:</strong> ${analysis.totalAppliedPositions}</p>
     <p><strong>Số nhóm cặp khác nhau:</strong> ${analysis.uniqueGroupCount}</p>
     <div style="overflow-x:auto">
       <table>
