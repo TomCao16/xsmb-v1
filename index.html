@@ -144,10 +144,10 @@ function renderAnalysis(analysis) {
     throw new Error("Thuật toán không trả về danh sách Top 10 hợp lệ.");
   }
 
-  const rows = analysis.top10.map(item => {
-    const source = item.sourceOccurrences.map(o =>
-      `${o.prize} ${o.sourceValue} → ${o.pair}`
-    ).join("; ");
+  const source = item.sourceOccurrences.map(o =>
+  `${o.left.prize} ${o.left.sourceValue}[vị trí ${o.left.digitPosition}] + ` +
+  `${o.right.prize} ${o.right.sourceValue}[vị trí ${o.right.digitPosition}] → ${o.pair}`
+).join("; ");
 
     const matches = item.comparisonOccurrences.map(o =>
       `${o.prize} ${o.sourceValue} (đuôi ${o.tail})`
