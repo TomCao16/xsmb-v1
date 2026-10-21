@@ -191,6 +191,7 @@ function renderAnalysis(analysis) {
   );
 }
 
+
 async function readSource() {
   const targetDate = dateInput.value;
 
@@ -201,64 +202,134 @@ async function readSource() {
 
   if (!window.XSMBAlgorithm ||
       typeof window.XSMBAlgorithm.analyze !== "function") {
-    showError(sourceBox,
-      "Không nạp được xsmb-v1-algorithm.js. " +
-      "Kiểm tra file trong repository và tải lại trang.");
+    showError(sourceBox, "Không nạp được xsmb-v1-algorithm.js.");
     return;
   }
 
   readButton.disabled = true;
   showText(resultBox, "Đang phân tích dữ liệu...");
   showText(detailsBox, "Đang chờ dữ liệu từ Worker...");
-  showText(sourceBox, "Đang gọi Worker đọc nguồn ketqua16.net...");
+  showText(sourceBox, "Đang đọc kết quả ngày mục tiêu và ngày trước...");
 
   try {
-    const url = new URL(WORKER_URL);
-    url.searchParams.set("date", targetDate);
+    const baseUrl = "https://xsmb-v1-reader.czcaonguyen.workers.dev";
 
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: { "Accept": "application/json" },
-      cache: "no-store"
-    });
+    async function fetchJson(path, date) {
+      const url = new URL(path, baseUrl);
+      url.searchParams.set("date", date);
 
-    const body = await response.text();
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+        cache: "no-store"
+      });
 
-    if (!response.ok) {
-      throw new Error(`Worker HTTP ${response.status}: ${body.slice(0, 500)}`);
+      const body = await response.text();
+
+      if (!response.ok) {
+        throw new Error(
+          `${path} HTTP ${response.status}: ${body.slice(0, 300)}`
+        );
+      }
+
+      let json;
+      try {
+        json = JSON.parse(body);
+      } catch {
+        throw new Error(`${path} không trả JSON hợp lệ.`);
+      }
+
+      if (json.error || json.status === "ERROR" || json.ok === false) {
+        throw new Error(
+          json.error || json.message || `${path} báo lỗi.`
+        );
+      }
+
+      return json;
     }
 
-    let data;
-    try {
-      data = JSON.parse(body);
-    } catch {
+    const previousDate = (() => {
+      const d = new Date(`${targetDate}T12:00:00Z`);
+      d.setUTCDate(d.getUTCDate() - 1);
+      return d.toISOString().slice(0, 10);
+    })();
+
+    // Đọc kết quả thật ngày N.
+    const targetData = await fetchJson("/read", targetDate);
+
+    if (
+      targetData.result?.date !== targetDate ||
+      targetData.result?.complete !== true
+    ) {
       throw new Error(
-        "Worker không trả JSON hợp lệ. Nội dung nhận được: " +
-        body.slice(0, 300)
+        `Kết quả ngày mục tiêu ${targetDate} chưa đầy đủ hoặc sai ngày.`
       );
     }
 
-    if (data.error || data.status === "ERROR") {
-      throw new Error(data.error || data.message || "Worker báo lỗi.");
+    // Đọc lịch sử để lấy ngày N-1.
+    const historyData = await fetchJson("/history", targetDate);
+    const history = historyData.history;
+
+    if (!history || !Array.isArray(history.days)) {
+      throw new Error("JSON /history thiếu history.days.");
     }
 
-    const analysis = window.XSMBAlgorithm.analyze(data, { targetDate });
+    const previousEntry = history.days.find(
+      day => day.date === previousDate &&
+             day.status === "complete" &&
+             day.result?.complete === true
+    );
+
+    if (!previousEntry) {
+      throw new Error(
+        `Không tìm thấy kết quả đầy đủ ngày ${previousDate} trong /history.`
+      );
+    }
+
+    // Đưa cả N và N-1 vào một cấu trúc dữ liệu.
+    // buildDateMap() sẽ được kiểm tra thông qua analyze().
+    const analysisData = {
+      ok: true,
+      requested_date: targetDate,
+      date: targetDate,
+      result: targetData.result,
+      history: {
+        target_date: targetDate,
+        days: [
+          {
+            date: previousDate,
+            status: "complete",
+            result: previousEntry.result
+          }
+        ]
+      }
+    };
+
+    const analysis = window.XSMBAlgorithm.analyze(
+      analysisData,
+      { targetDate }
+    );
+
     renderAnalysis(analysis);
 
-    showText(sourceBox,
+    showText(
+      sourceBox,
       `Đọc nguồn thành công.\n` +
-      `Worker: ${data.version || "Không có thông tin phiên bản"}\n` +
+      `Worker: ${targetData.version || "Không rõ"}\n` +
       `Thuật toán: ${window.XSMBAlgorithm.version}\n` +
-      `Ngày yêu cầu: ${targetDate}`,
+      `Ngày mục tiêu: ${targetDate}\n` +
+      `Ngày áp dụng vị trí: ${previousDate}\n` +
+      `Ngày mục tiêu đầy đủ: 27 kết quả đã được xác minh.\n` +
+      `Ngày trước: dữ liệu đầy đủ đã được xác minh.`,
       true
     );
   } catch (error) {
     showError(resultBox, "Không thể tạo kết quả.");
     showError(detailsBox, "Chưa xác minh được dữ liệu.");
-    showError(sourceBox,
-      "Lỗi: " + (error && error.message
-        ? error.message
-        : String(error)) +
+    showError(
+      sourceBox,
+      "Lỗi: " +
+      (error?.message || String(error)) +
       "\nKhông tạo số thay thế. Hãy gửi nguyên thông báo này để kiểm tra."
     );
   } finally {
