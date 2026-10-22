@@ -1,31 +1,27 @@
 
 /*
  * XSMB V1 - POSITIONAL TRANSFER MATCHER
- * Version 5.0.0
+ * Version 6.0.0
  *
- * Quy trình:
- * 1. Ngày N xác định các cụm ô và vị trí chữ số tạo cặp.
- * 2. Áp dụng đúng các vị trí đó lên ngày N-1.
- * 3. Đối chiếu cặp tạo từ ngày N-1 với đuôi 2 số của DB-G7 ngày N.
- * 4. Loại cặp không xuất hiện trong kết quả thực tế.
- * 5. Đếm theo số vị trí ghép, không xếp hạng Top 10/15.
+ * Quy tắc:
+ * 1. Ngày N xác định các cặp chữ số và tọa độ ghép hợp lệ.
+ * 2. Chỉ giữ mẫu có cùng cặp có mặt tại ít nhất 4 cặp tọa độ khác nhau.
+ * 3. Ưu tiên mẫu có nhiều tọa độ hợp lệ hơn; dùng toàn bộ tọa độ của mẫu.
+ * 4. Áp dụng nguyên tọa độ đó lên ngày N-1 để tạo cặp mới.
+ * 5. Đối chiếu cặp mới với đuôi 2 số của mọi giải DB-G7 ngày N.
+ * 6. Chỉ giữ cặp khớp; gộp cặp đảo chiều khi trình bày, không mất occurrence.
+ * 7. Không tự tạo số và không cắt Top 10/15 theo tần suất.
  *
- * Bố cục giả định:
- * G3: 2 hàng x 3 cột.
- * G5: 2 hàng x 3 cột.
- * G6: 1 hàng x 3 cột.
- *
- * Các số trong mảng prizes phải giữ đúng thứ tự ô trên bảng nguồn.
+ * Bố cục dữ liệu theo thứ tự mảng Worker trả về:
+ * G3/G5: 2 hàng x 3 cột; G6: 1 hàng x 3 cột.
  */
 (function (root) {
   "use strict";
 
-  const VERSION = "XSMB V1 POSITIONAL TRANSFER MATCHER 5.0.0";
-
-  const PRIZE_ORDER = [
-    "DB", "G1", "G2", "G3", "G4", "G5", "G6", "G7"
-  ];
-
+  const VERSION = "XSMB V1 POSITIONAL TRANSFER MATCHER 6.0.0";
+  const MIN_POSITION_COUNT = 4;
+  const PRIZE_ORDER = ["DB", "G1", "G2", "G3", "G4", "G5", "G6", "G7"];
+  const STRUCTURED_PRIZES = ["G3", "G5", "G6"];
   const PRIZE_NAMES = {
     DB: "Đặc biệt",
     G1: "Giải nhất",
@@ -39,18 +35,15 @@
 
   function normalizeDate(value) {
     if (!value) return null;
-
     const s = String(value).trim();
 
-    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (m) return s;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (m) {
-      return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
-    }
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
 
-    return null;
+    return m
+      ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`
+      : null;
   }
 
   function shiftDate(date, amount) {
@@ -110,12 +103,10 @@
 
       if (raw === undefined || raw === null) continue;
 
-      const values = Array.isArray(raw) ? raw : [raw];
-
-      values.forEach((value, index) => {
+      (Array.isArray(raw) ? raw : [raw]).forEach((value, index) => {
         const digits = digitsOnly(value);
 
-        if (!digits) return;
+        if (digits === null) return;
 
         rows.push({
           date: normalizeDate(result.date || day.date),
@@ -132,6 +123,7 @@
 
   function canonicalPair(pair) {
     const reverse = pair.split("").reverse().join("");
+
     return pair <= reverse ? pair : reverse;
   }
 
@@ -140,9 +132,7 @@
       return data.history.days;
     }
 
-    if (Array.isArray(data?.days)) {
-      return data.days;
-    }
+    if (Array.isArray(data?.days)) return data.days;
 
     return [];
   }
@@ -150,7 +140,6 @@
   function buildDateMap(data) {
     const map = new Map();
 
-    // Kết quả ngày được chọn có thể nằm trực tiếp trong data.
     const directCandidates = [
       data?.current,
       data?.currentDay,
@@ -168,7 +157,6 @@
       }
     }
 
-    // Kết quả lịch sử từ Worker.
     for (const day of getDays(data)) {
       const result = getResultObject(day);
       const date = normalizeDate(result?.date || day?.date);
@@ -181,16 +169,19 @@
     return map;
   }
 
-  /*
-   * Xây dựng lưới theo thứ tự mảng:
-   *
-   * G3/G5:
-   *   [0] [1] [2]
-   *   [3] [4] [5]
-   *
-   * G6:
-   *   [0] [1] [2]
-   */
+  function makeCell(row, rowIndex = 0, columnIndex = 0) {
+    return {
+      date: row.date,
+      prize: row.prize,
+      prizeName: row.prizeName,
+      resultIndex: row.resultIndex,
+      sourceValue: row.sourceValue,
+      rowIndex,
+      columnIndex,
+      cellId: `${row.prize}:${row.resultIndex}`
+    };
+  }
+
   function makeGrid(day, prize, rowCount, columnCount) {
     const rows = getPrizeRows(day, [prize]);
     const expected = rowCount * columnCount;
@@ -207,177 +198,159 @@
 
     for (let r = 0; r < rowCount; r++) {
       grid.push(
-        selected.slice(r * columnCount, (r + 1) * columnCount)
+        selected
+          .slice(r * columnCount, (r + 1) * columnCount)
+          .map((row, c) => makeCell(row, r, c))
       );
     }
 
     return grid;
   }
 
-  function makeCell(row, rowIndex, columnIndex) {
-    return {
-      date: row.date,
-      prize: row.prize,
-      prizeName: row.prizeName,
-      resultIndex: row.resultIndex,
-      sourceValue: row.sourceValue,
-      rowIndex,
-      columnIndex
-    };
-  }
-
   function makeSourceGrids(day) {
-    const g3 = makeGrid(day, "G3", 2, 3);
-    const g5 = makeGrid(day, "G5", 2, 3);
-    const g6 = makeGrid(day, "G6", 1, 3);
-
     return {
-      G3: g3.map((row, r) =>
-        row.map((cell, c) => makeCell(cell, r, c))
-      ),
-      G5: g5.map((row, r) =>
-        row.map((cell, c) => makeCell(cell, r, c))
-      ),
-      G6: g6.map((row, r) =>
-        row.map((cell, c) => makeCell(cell, r, c))
-      )
+      G3: makeGrid(day, "G3", 2, 3),
+      G5: makeGrid(day, "G5", 2, 3),
+      G6: makeGrid(day, "G6", 1, 3)
     };
   }
 
-  function makeCellId(cell) {
-    return `${cell.prize}:${cell.resultIndex}`;
+  function coordinateKey(a, b) {
+    const one = `${a.cellId}@${a.digitIndex}`;
+    const two = `${b.cellId}@${b.digitIndex}`;
+
+    return one <= two ? `${one}|${two}` : `${two}|${one}`;
   }
 
-  /*
-   * Tạo cụm ô đủ điều kiện.
-   *
-   * G3: mỗi cụm gồm hai cột liền kề trong lưới 2x3.
-   * G5: mỗi cụm gồm hai ô trên/dưới cùng cột.
-   * G5-G6: ghép hai ô G5 cùng cột với ô G6 tương ứng.
-   *
-   * Từng cụm có ID riêng để truy lại vị trí tạo cặp.
-   */
-  function buildClusters(grids) {
-    const clusters = [];
-
-    // G3: hai cột liền kề, mỗi cột có hai ô.
-    for (let c = 0; c < 2; c++) {
-      clusters.push({
-        id: `G3_COLUMNS_${c + 1}_${c + 2}`,
-        cells: [
-          grids.G3[0][c],
-          grids.G3[1][c],
-          grids.G3[0][c + 1],
-          grids.G3[1][c + 1]
-        ]
-      });
+  function addEdge(edges, leftCell, rightCell, relation) {
+    if (
+      !leftCell ||
+      !rightCell ||
+      leftCell.cellId === rightCell.cellId
+    ) {
+      return;
     }
 
-    // G5: cặp ô trên/dưới cùng cột.
-    for (let c = 0; c < 3; c++) {
-      clusters.push({
-        id: `G5_COLUMN_${c + 1}`,
-        cells: [
-          grids.G5[0][c],
-          grids.G5[1][c]
-        ]
+    const key = [leftCell.cellId, rightCell.cellId].sort().join("|");
+
+    if (!edges.some(edge => edge.key === key)) {
+      edges.push({
+        key,
+        leftCell,
+        rightCell,
+        relation
       });
     }
-
-    // G5-G6: hai ô G5 và ô G6 cùng cột.
-    for (let c = 0; c < 3; c++) {
-      clusters.push({
-        id: `G5_G6_COLUMN_${c + 1}`,
-        cells: [
-          grids.G5[0][c],
-          grids.G5[1][c],
-          grids.G6[0][c]
-        ]
-      });
-    }
-
-    return clusters;
   }
 
-  /*
-   * Tìm tất cả vị trí của một chữ số trong cụm.
-   * Mỗi vị trí lưu rõ giải, ô và chỉ số chữ số.
-   * digitIndex là chỉ số bắt đầu từ 0 trong chuỗi số.
-   */
-  function collectDigitPositions(cluster) {
-    const positions = [];
+  function getStructuredEdges(grids) {
+    const edges = [];
 
-    for (const cell of cluster.cells) {
-      for (
-        let digitIndex = 0;
-        digitIndex < cell.sourceValue.length;
-        digitIndex++
-      ) {
-        positions.push({
-          clusterId: cluster.id,
-          cellId: makeCellId(cell),
-          prize: cell.prize,
-          prizeName: cell.prizeName,
-          resultIndex: cell.resultIndex,
-          rowIndex: cell.rowIndex,
-          columnIndex: cell.columnIndex,
-          sourceValue: cell.sourceValue,
-          digitIndex,
-          digitPosition: digitIndex + 1,
-          digit: cell.sourceValue[digitIndex]
-        });
+    for (const prize of ["G3", "G5"]) {
+      const grid = grids[prize];
+
+      // Các ô kề nhau theo hàng hoặc theo cột.
+      for (let r = 0; r < grid.length; r++) {
+        for (let c = 0; c < grid[r].length; c++) {
+          if (c + 1 < grid[r].length) {
+            addEdge(
+              edges,
+              grid[r][c],
+              grid[r][c + 1],
+              "horizontal-adjacent"
+            );
+          }
+
+          if (r + 1 < grid.length) {
+            addEdge(
+              edges,
+              grid[r][c],
+              grid[r + 1][c],
+              "vertical-adjacent"
+            );
+          }
+        }
       }
     }
 
-    return positions;
+    const g6 = grids.G6[0];
+
+    for (let c = 0; c + 1 < g6.length; c++) {
+      addEdge(
+        edges,
+        g6[c],
+        g6[c + 1],
+        "horizontal-adjacent"
+      );
+    }
+
+    // Quan hệ G5-G6 cùng cột.
+    for (let c = 0; c < 3; c++) {
+      addEdge(
+        edges,
+        grids.G5[0][c],
+        g6[c],
+        "G5-G6-same-column"
+      );
+
+      addEdge(
+        edges,
+        grids.G5[1][c],
+        g6[c],
+        "G5-G6-same-column"
+      );
+    }
+
+    return edges;
   }
 
-  /*
-   * Ngày N xác định cặp chữ số và tọa độ của từng vị trí.
-   * Mỗi tổ hợp hai vị trí chữ số khác nhau trong một cụm
-   * tạo thành một mẫu để áp dụng lên ngày N-1.
-   */
-  function extractPositionPatterns(dayN) {
-    const grids = makeSourceGrids(dayN);
-    const clusters = buildClusters(grids);
-    const patterns = [];
+  function makeDigitPosition(cell, digitIndex) {
+    return {
+      cellId: cell.cellId,
+      prize: cell.prize,
+      prizeName: cell.prizeName,
+      resultIndex: cell.resultIndex,
+      rowIndex: cell.rowIndex,
+      columnIndex: cell.columnIndex,
+      sourceValue: cell.sourceValue,
+      digitIndex,
+      digitPosition: digitIndex + 1,
+      digit: cell.sourceValue[digitIndex]
+    };
+  }
+
+  function collectCandidatePatterns(dayN) {
+    const candidates = [];
     const seen = new Set();
 
-    for (const cluster of clusters) {
-      const positions = collectDigitPositions(cluster);
+    // G3/G5/G6: lấy vị trí chữ số trong các ô kề nhau theo lưới.
+    const grids = makeSourceGrids(dayN);
 
-      for (let i = 0; i < positions.length; i++) {
-        for (let j = i + 1; j < positions.length; j++) {
-          const left = positions[i];
-          const right = positions[j];
+    for (const edge of getStructuredEdges(grids)) {
+      for (
+        let leftIndex = 0;
+        leftIndex < edge.leftCell.sourceValue.length;
+        leftIndex++
+      ) {
+        for (
+          let rightIndex = 0;
+          rightIndex < edge.rightCell.sourceValue.length;
+          rightIndex++
+        ) {
+          const left = makeDigitPosition(edge.leftCell, leftIndex);
+          const right = makeDigitPosition(edge.rightCell, rightIndex);
 
-          const sameCell = left.cellId === right.cellId;
+          const key =
+            `${edge.relation}|${coordinateKey(left, right)}`;
 
-          // Hai chữ số phải là hai vị trí khác nhau.
-          if (
-            sameCell &&
-            left.digitIndex === right.digitIndex
-          ) {
-            continue;
-          }
+          if (seen.has(key)) continue;
 
-          // Chỉ lấy một mẫu cho mỗi cặp tọa độ trong mỗi cụm.
-          const coordinates = [
-            `${left.cellId}@${left.digitIndex}`,
-            `${right.cellId}@${right.digitIndex}`
-          ].sort();
+          seen.add(key);
 
-          const uniqueKey =
-            `${cluster.id}|${coordinates[0]}|${coordinates[1]}`;
-
-          if (seen.has(uniqueKey)) continue;
-          seen.add(uniqueKey);
-
-          patterns.push({
-            patternId: uniqueKey,
-            clusterId: cluster.id,
+          candidates.push({
+            patternId: key,
+            relation: edge.relation,
             sourcePair: left.digit + right.digit,
-            sourceGroup: canonicalPair(left.digit + right.digit),
             left,
             right
           });
@@ -385,45 +358,130 @@
       }
     }
 
-    return patterns;
-  }
+    // Các giải còn lại: chữ số liền kề trong từng kết quả.
+    const nonStructuredRows = getPrizeRows(
+      dayN,
+      PRIZE_ORDER.filter(
+        prize => !STRUCTURED_PRIZES.includes(prize)
+      )
+    );
 
-  function getCellById(grids, cellId) {
-    const [prize, indexText] = cellId.split(":");
-    const resultIndex = Number(indexText);
+    for (const row of nonStructuredRows) {
+      const cell = makeCell(row);
 
-    const grid = grids[prize];
-    if (!grid) return null;
+      for (let i = 0; i + 1 < cell.sourceValue.length; i++) {
+        const left = makeDigitPosition(cell, i);
+        const right = makeDigitPosition(cell, i + 1);
 
-    for (const row of grid) {
-      for (const cell of row) {
-        if (cell.resultIndex === resultIndex) {
-          return cell;
-        }
+        const key = `adjacent-digits|${coordinateKey(left, right)}`;
+
+        if (seen.has(key)) continue;
+
+        seen.add(key);
+
+        candidates.push({
+          patternId: key,
+          relation: "adjacent-digits-in-result",
+          sourcePair: left.digit + right.digit,
+          left,
+          right
+        });
       }
     }
 
-    return null;
+    return candidates;
   }
 
-  /*
-   * Áp dụng các tọa độ đã xác định trên ngày N
-   * lên số liệu ngày N-1.
-   */
+  function extractPositionPatterns(dayN) {
+    const candidates = collectCandidatePatterns(dayN);
+    const byPair = new Map();
+
+    for (const candidate of candidates) {
+      if (!byPair.has(candidate.sourcePair)) {
+        byPair.set(candidate.sourcePair, []);
+      }
+
+      byPair.get(candidate.sourcePair).push(candidate);
+    }
+
+    const eligible = [];
+
+    for (const [sourcePair, occurrences] of byPair.entries()) {
+      const unique = new Map();
+
+      for (const occurrence of occurrences) {
+        unique.set(occurrence.patternId, occurrence);
+      }
+
+      if (unique.size < MIN_POSITION_COUNT) continue;
+
+      eligible.push({
+        sourcePair,
+        occurrences: Array.from(unique.values()),
+        positionCount: unique.size
+      });
+    }
+
+    // Ưu tiên số vị trí hợp lệ giảm dần.
+    eligible.sort(
+      (a, b) =>
+        b.positionCount - a.positionCount ||
+        a.sourcePair.localeCompare(b.sourcePair)
+    );
+
+    const patterns = [];
+
+    for (const group of eligible) {
+      for (const occurrence of group.occurrences) {
+        patterns.push({
+          ...occurrence,
+          sourceGroup: canonicalPair(group.sourcePair),
+          sourcePairPositionCount: group.positionCount,
+          minimumRequiredPositions: MIN_POSITION_COUNT
+        });
+      }
+    }
+
+    return patterns;
+  }
+
+  function getCellById(day, cellId) {
+    const [prize, indexText] = cellId.split(":");
+    const resultIndex = Number(indexText);
+
+    const row = getPrizeRows(day, [prize]).find(
+      item => item.resultIndex === resultIndex
+    );
+
+    return row ? makeCell(row) : null;
+  }
+
   function applyPatternsToPreviousDay(patterns, dayPrevious) {
-    const grids = makeSourceGrids(dayPrevious);
     const applied = [];
 
     for (const pattern of patterns) {
-      const leftCell = getCellById(grids, pattern.left.cellId);
-      const rightCell = getCellById(grids, pattern.right.cellId);
+      const leftCell = getCellById(
+        dayPrevious,
+        pattern.left.cellId
+      );
+
+      const rightCell = getCellById(
+        dayPrevious,
+        pattern.right.cellId
+      );
 
       if (!leftCell || !rightCell) continue;
 
-      const leftDigit = leftCell.sourceValue[pattern.left.digitIndex];
-      const rightDigit = rightCell.sourceValue[pattern.right.digitIndex];
+      const leftDigit =
+        leftCell.sourceValue[pattern.left.digitIndex];
 
-      if (leftDigit === undefined || rightDigit === undefined) {
+      const rightDigit =
+        rightCell.sourceValue[pattern.right.digitIndex];
+
+      if (
+        leftDigit === undefined ||
+        rightDigit === undefined
+      ) {
         continue;
       }
 
@@ -432,7 +490,10 @@
       applied.push({
         date: leftCell.date,
         patternId: pattern.patternId,
-        clusterId: pattern.clusterId,
+        relation: pattern.relation,
+        sourcePairOnTargetDay: pattern.sourcePair,
+        sourcePairPositionCount: pattern.sourcePairPositionCount,
+        clusterId: pattern.relation,
         pair,
         group: canonicalPair(pair),
 
@@ -440,8 +501,8 @@
           prize: leftCell.prize,
           prizeName: leftCell.prizeName,
           resultIndex: leftCell.resultIndex,
-          rowIndex: leftCell.rowIndex,
-          columnIndex: leftCell.columnIndex,
+          rowIndex: pattern.left.rowIndex,
+          columnIndex: pattern.left.columnIndex,
           sourceValue: leftCell.sourceValue,
           digitIndex: pattern.left.digitIndex,
           digitPosition: pattern.left.digitIndex + 1,
@@ -452,8 +513,8 @@
           prize: rightCell.prize,
           prizeName: rightCell.prizeName,
           resultIndex: rightCell.resultIndex,
-          rowIndex: rightCell.rowIndex,
-          columnIndex: rightCell.columnIndex,
+          rowIndex: pattern.right.rowIndex,
+          columnIndex: pattern.right.columnIndex,
           sourceValue: rightCell.sourceValue,
           digitIndex: pattern.right.digitIndex,
           digitPosition: pattern.right.digitIndex + 1,
@@ -494,33 +555,29 @@
 
     const previousDate = shiftDate(targetDate, -1);
     const byDate = buildDateMap(data);
-
     const dayN = byDate.get(targetDate);
     const dayPrevious = byDate.get(previousDate);
 
     if (!dayN) {
       throw new Error(
         `Thiếu kết quả ngày mục tiêu ${targetDate}. ` +
-        "Cần dữ liệu ngày N để xác định các vị trí ghép và đối chiếu."
+        "Cần dữ liệu ngày N để xác định mẫu và đối chiếu."
       );
     }
 
     if (!dayPrevious) {
       throw new Error(
-        `Thiếu kết quả ngày trước ${previousDate} để áp dụng các vị trí ghép.`
+        `Thiếu kết quả ngày nguồn ${previousDate} để áp dụng tọa độ.`
       );
     }
 
-    // Ngày N chỉ xác định vị trí ghép.
     const patterns = extractPositionPatterns(dayN);
 
-    // Áp dụng đúng tọa độ lên ngày N-1.
     const appliedPairs = applyPatternsToPreviousDay(
       patterns,
       dayPrevious
     );
 
-    // Đối chiếu với đuôi 2 số của tất cả giải DB-G7 ngày N.
     const actualTails = extractActualTails(dayN);
     const actualGroups = new Map();
 
@@ -541,9 +598,10 @@
         grouped.set(item.group, {
           group: item.group,
           reverse,
-          label: item.group === reverse
-            ? item.group
-            : `${item.group}/${reverse}`,
+          label:
+            item.group === reverse
+              ? item.group
+              : `${item.group}/${reverse}`,
           occurrences: [],
           firstOrder: grouped.size
         });
@@ -552,26 +610,21 @@
       grouped.get(item.group).occurrences.push(item);
     }
 
-    // Không xếp hạng theo tần suất.
-    // Giữ thứ tự nhóm xuất hiện lần đầu trong danh sách vị trí.
     const results = [];
 
     for (const record of grouped.values()) {
       const matches = actualGroups.get(record.group) || [];
 
-      // Cặp không có trong kết quả thực tế ngày N thì loại.
-      if (matches.length === 0) continue;
+      // Chỉ giữ các cặp xuất hiện ở đuôi hai số ngày N.
+      if (!matches.length) continue;
 
       results.push({
         rank: results.length + 1,
         group: record.group,
         reverse: record.reverse,
         label: record.label,
-
-        // Số vị trí tạo cặp, không phải tần suất lô tô.
         frequency: record.occurrences.length,
         positionCount: record.occurrences.length,
-
         sourceOccurrences: record.occurrences,
         matched: true,
         matchCount: matches.length,
@@ -582,45 +635,44 @@
     return {
       version: VERSION,
       targetDate,
-      sourceDate: targetDate,
-      compareDate: previousDate,
-
+      sourceDate: previousDate,
+      compareDate: targetDate,
+      minimumPatternPositions: MIN_POSITION_COUNT,
       patternCount: patterns.length,
+      qualifyingSourcePairCount: new Set(
+        patterns.map(pattern => pattern.sourcePair)
+      ).size,
       totalAppliedPositions: appliedPairs.length,
       uniqueGroupCount: grouped.size,
       matchedGroupCount: results.length,
-
-      // Kết quả chính: tất cả nhóm cặp khớp, không cắt Top 10/15.
       results,
 
-      // Tên trường tương thích với giao diện cũ.
-      // Đây không phải danh sách Top 10 theo tần suất.
+      // Tương thích với index.html; không cắt danh sách Top 10/15.
       top10: results,
       top15: results,
 
-      sourcePrizeOrder: ["G3", "G5", "G6"],
+      sourcePrizeOrder: STRUCTURED_PRIZES,
       comparisonPrizeOrder: PRIZE_ORDER.slice(),
-
       actualTails,
       positionPatterns: patterns,
       appliedPairs,
 
       notes: [
-        "Ngày N xác định cụm ô và tọa độ chữ số ghép.",
-        "Ngày N-1 nhận đúng các tọa độ đã xác định từ ngày N.",
-        "Đối chiếu dùng đuôi hai chữ số của DB đến G7 ngày N.",
-        "Cặp đảo chiều được gộp khi trình bày.",
-        "Cặp không xuất hiện trong kết quả thực tế bị loại.",
-        "Không chọn Top 10 hoặc Top 15 theo tần suất.",
-        "positionCount là số vị trí tạo cặp.",
-        "Bố cục lưới phải khớp thứ tự số Worker trả về."
+        "Ngày N xác định mẫu vị trí; mỗi cặp phải có ít nhất 4 cặp tọa độ khác nhau.",
+        "Ưu tiên theo số tọa độ hợp lệ giảm dần và dùng toàn bộ tọa độ của mẫu.",
+        "Tọa độ được áp dụng nguyên vẹn lên ngày N-1 để tạo cặp mới.",
+        "Đối chiếu bằng đuôi hai chữ số của tất cả giải DB-G7 ngày N.",
+        "Cặp đảo chiều được gộp khi trình bày; từng lần tạo cặp và tọa độ được bảo toàn.",
+        "Không cắt Top 10/15 theo tần suất.",
+        "G3/G5/G6 dùng quan hệ ô kề nhau theo lưới; các giải khác dùng chữ số liền kề trong từng kết quả.",
+        "Lưới G3/G5/G6 yêu cầu đúng thứ tự số Worker trả về."
       ]
     };
   }
 
   root.XSMBAlgorithm = {
     version: VERSION,
-    prizeOrder: ["G3", "G5", "G6"],
+    prizeOrder: PRIZE_ORDER.slice(),
     canonicalPair,
     extractPositionPatterns,
     applyPatternsToPreviousDay,
