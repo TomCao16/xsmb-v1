@@ -238,6 +238,21 @@
   </header>
 
   <section class="panel">
+    <h2>3. Các cặp mẫu được lấy trực tiếp từ ngày N</h2>
+    <p class="note">
+      Đây là các mẫu lấy từ kết quả thực tế ngày N theo những ô
+      và quan hệ ghép đã quy định. Bảng này không phải cặp được
+      tạo từ ngày N−1. Các nhóm được sắp xếp theo số tọa độ hợp lệ.
+    </p>
+    <div id="samplePatternInfo" class="note">
+      Chưa có mẫu ngày N.
+    </div>
+    <div id="samplePatterns" class="empty">
+      Các cặp mẫu ngày N sẽ xuất hiện sau khi phân tích.
+    </div>
+  </section>
+
+  <section class="panel">
     <h2>1. Chọn ngày N để phân tích</h2>
 
     <div class="controls">
@@ -308,7 +323,15 @@ const dateInput = document.getElementById("targetDate");
 const readButton = document.getElementById("readButton");
 const readStatus = document.getElementById("readStatus");
 const metadata = document.getElementById("metadata");
-const resultInfo = document.getElementById("resultInfo");
+
+const samplePatternInfo =
+  document.getElementById("samplePatternInfo");
+
+const samplePatterns =
+  document.getElementById("samplePatterns");
+
+const resultInfo =
+  document.getElementById("resultInfo");
 const pairResults = document.getElementById("pairResults");
 const dateInfo = document.getElementById("dateInfo");
 const dateResults = document.getElementById("dateResults");
@@ -807,6 +830,119 @@ function getReportRecords(report) {
   return possible.find(Array.isArray) || [];
 }
 
+function getSamplePatternRecords(report) {
+  const possible = [
+    report.positionPatterns,
+    report.samplePatterns,
+    report.patternGroups
+  ];
+
+  return possible.find(Array.isArray) || [];
+}
+
+function getSamplePair(record) {
+  return String(
+    record.group ??
+    record.canonicalPair ??
+    record.label ??
+    record.pair ??
+    record.samplePair ??
+    record.number ??
+    ""
+  );
+}
+
+function getSamplePositions(record) {
+  return (
+    record.sourceOccurrences ||
+    record.patternOccurrences ||
+    record.positions ||
+    record.occurrences ||
+    record.creations ||
+    []
+  );
+}
+
+function getSampleCount(record) {
+  const positions = getSamplePositions(record);
+
+  if (positions.length > 0) {
+    return positions.length;
+  }
+
+  const count =
+    record.positionCount ??
+    record.validPositionCount ??
+    record.validCreationCount;
+
+  return Number.isFinite(count) ? count : 0;
+}
+
+function renderSamplePatterns(report, targetDate) {
+  const records = getSamplePatternRecords(report);
+
+  if (!records.length) {
+    samplePatternInfo.textContent =
+      "Thuật toán không trả về danh sách positionPatterns " +
+      "hoặc danh sách mẫu đang rỗng. Không tự tạo mẫu thay thế.";
+
+    samplePatterns.className = "empty";
+    samplePatterns.textContent =
+      "Chưa thể hiển thị cặp mẫu ngày " +
+      formatDate(targetDate) +
+      ". Cần kiểm tra cấu trúc dữ liệu trả về từ analyze().";
+
+    return;
+  }
+
+  const rows = records.map((record, index) => {
+    const pair = document.createElement("span");
+    pair.className = "pair";
+    pair.textContent = getSamplePair(record) || "(Chưa có trường cặp)";
+
+    const count = document.createElement("span");
+    count.className = "count";
+    count.textContent = getSampleCount(record) + " tọa độ";
+
+    const positions = makePositionList(
+      getSamplePositions(record),
+      item => {
+        if (item && typeof item === "object") {
+          return formatCreation(item);
+        }
+
+        return String(item);
+      }
+    );
+
+    return [
+      index + 1,
+      pair,
+      count,
+      positions
+    ];
+  });
+
+  const wrap = document.createElement("div");
+  wrap.className = "table-wrap";
+
+  wrap.appendChild(makeTable(
+    [
+      "STT",
+      "Cặp mẫu ngày N",
+      "Số tọa độ hợp lệ",
+      "Vị trí tạo mẫu trên ngày N"
+    ],
+    rows
+  ));
+
+  samplePatternInfo.textContent =
+    "Ngày mẫu: " + formatDate(targetDate) +
+    " · Số nhóm mẫu thuật toán trả về: " + records.length;
+
+  samplePatterns.className = "";
+  samplePatterns.replaceChildren(wrap);
+}
 function renderMetadata(report, targetDate, previousDate) {
   const rows = [
     ["Ngày mẫu vị trí N", formatDate(targetDate)],
@@ -946,6 +1082,9 @@ function clearResults() {
   resultInfo.textContent = "Đang xử lý...";
   pairResults.className = "empty";
   pairResults.textContent = "Đang đọc nguồn...";
+  samplePatternInfo.textContent = "Đang lấy mẫu từ ngày N...";
+samplePatterns.className = "empty";
+samplePatterns.textContent = "Đang xử lý mẫu ngày N...";
   dateResults.replaceChildren();
 
   setStatus(dateInfo, "Đang kiểm tra dữ liệu.");
@@ -1038,7 +1177,12 @@ readButton.addEventListener("click", async () => {
     }
 
     renderMetadata(report, targetDate, previousDate);
-    renderPairs(report);
+
+// Bảng A: mẫu được lấy trực tiếp từ ngày N.
+renderSamplePatterns(report, targetDate);
+
+// Bảng B/C: cặp tạo từ N−1 và đối chiếu thực tế ngày N.
+renderPairs(report);
 
     renderDateChecks(
       targetDate,
