@@ -140,59 +140,94 @@ function formatDate(date) {
 }
 
 
+
 function renderAnalysis(analysis) {
-  if (!analysis || !Array.isArray(analysis.top10)) {
-    throw new Error("Thuật toán không trả về danh sách kết quả hợp lệ.");
+  if (!analysis || !Array.isArray(analysis.results)) {
+    throw new Error(
+      "Thuật toán không trả về danh sách results hợp lệ."
+    );
   }
 
-  const rows = analysis.top10.map(item => {
-    const source = (item.sourceOccurrences || []).map(o =>
-      `${o.left.prize} ${o.left.sourceValue}[vị trí ${o.left.digitPosition}] + ` +
-      `${o.right.prize} ${o.right.sourceValue}[vị trí ${o.right.digitPosition}] → ${o.pair}`
-    ).join("; ");
+  const matchedResults = analysis.results.filter(
+    item => item.matched === true
+  );
+
+  const rows = matchedResults.map(item => {
+    const sourceItems = item.sourceOccurrences || [];
+
+    const sourceText = sourceItems.map(o => {
+      const leftNumber = o.left?.sourceValue ?? "";
+      const rightNumber = o.right?.sourceValue ?? "";
+
+      return `${leftNumber} + ${rightNumber} → ${o.pair}`;
+    }).join("; ");
 
     const matches = (item.comparisonOccurrences || []).map(o =>
-      `${o.prize} ${o.sourceValue} (đuôi ${o.tail})`
+      `${o.prizeName || o.prize} ${o.sourceValue} (đuôi ${o.tail})`
     ).join("; ");
 
     return `<tr>
-      <td>${item.rank}</td>
       <td><strong>${escapeHtml(item.label)}</strong></td>
-      <td>${item.frequency}</td>
-      <td>${item.matched ? "Có" : "Không"}</td>
-      <td>${item.matchCount}</td>
-      <td>${escapeHtml(source || "Không có")}</td>
-      <td>${escapeHtml(matches || "Không khớp")}</td>
+      <td>${item.frequency ?? sourceItems.length}</td>
+      <td>${item.matchCount ?? 0}</td>
+      <td>${escapeHtml(sourceText || "Không có lượt tạo cặp")}</td>
+      <td>${escapeHtml(matches || "Không có kết quả khớp")}</td>
     </tr>`;
   }).join("");
 
   resultBox.className = "status";
-  resultBox.innerHTML = `
-    <p><strong>Ngày nguồn:</strong> ${formatDate(analysis.sourceDate)}</p>
-    <p><strong>Ngày đối chiếu:</strong> ${formatDate(analysis.compareDate)}</p>
-    <p><strong>Tổng lượt cặp được trích:</strong> ${analysis.totalAppliedPositions}</p>
-    <p><strong>Số nhóm cặp khác nhau:</strong> ${analysis.uniqueGroupCount}</p>
-    <div style="overflow-x:auto">
-      <table>
-        <thead><tr>
-          <th>Hạng</th><th>Nhóm cặp</th><th>Tần suất</th>
-          <th>Khớp?</th><th>Số lượt khớp</th>
-          <th>Vị trí ngày nguồn</th><th>Kết quả đối chiếu</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
 
-  showText(detailsBox,
+  if (matchedResults.length === 0) {
+    resultBox.innerHTML = `
+      <p><strong>Ngày mục tiêu:</strong>
+        ${formatDate(analysis.targetDate)}</p>
+      <p><strong>Ngày áp dụng vị trí:</strong>
+        ${formatDate(analysis.sourceDate)}</p>
+      <p>Không có nhóm cặp nào khớp đuôi kết quả thực tế
+      trong ngày mục tiêu.</p>
+    `;
+  } else {
+    resultBox.innerHTML = `
+      <p><strong>Ngày mục tiêu N:</strong>
+        ${formatDate(analysis.targetDate)}</p>
+      <p><strong>Ngày áp dụng vị trí N−1:</strong>
+        ${formatDate(analysis.sourceDate)}</p>
+      <p><strong>Ngày đối chiếu:</strong>
+        ${formatDate(analysis.compareDate)}</p>
+      <p><strong>Tổng lượt tạo cặp trước đối chiếu:</strong>
+        ${analysis.totalAppliedPositions ?? 0}</p>
+      <p><strong>Số nhóm cặp khớp thực tế:</strong>
+        ${matchedResults.length}</p>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Nhóm cặp (gộp đảo chiều)</th>
+              <th>Lượt tạo cặp</th>
+              <th>Số kết quả khớp</th>
+              <th>Các số tạo cặp từ ngày N−1</th>
+              <th>Kết quả thực tế xác nhận trên ngày N</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  showText(
+    detailsBox,
     `Ngày mục tiêu: ${formatDate(analysis.targetDate)}\n` +
-    `Ngày nguồn: ${formatDate(analysis.sourceDate)}\n` +
+    `Ngày áp dụng vị trí: ${formatDate(analysis.sourceDate)}\n` +
     `Ngày đối chiếu: ${formatDate(analysis.compareDate)}\n` +
-    `Các giải dùng để thống kê: ${analysis.sourcePrizeOrder.join(", ")}\n` +
+    `Số vị trí mẫu đủ điều kiện: ${analysis.patternCount ?? 0}\n` +
+    `Tổng lượt tạo cặp: ${analysis.totalAppliedPositions ?? 0}\n` +
+    `Số nhóm được tạo trước đối chiếu: ${analysis.uniqueGroupCount ?? 0}\n` +
+    `Số nhóm khớp thực tế: ${matchedResults.length}\n` +
     `Phiên bản thuật toán: ${analysis.version}`,
     true
   );
 }
-
 
 async function readSource() {
   const targetDate = dateInput.value;
