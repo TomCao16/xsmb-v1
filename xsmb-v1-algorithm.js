@@ -339,33 +339,27 @@
    * ngang, chéo xuống trái, dọc, chéo xuống phải.
    */
   function collectGridCandidates(grid, prefix, candidates, seen) {
-    for (let r = 0; r < grid.length; r++) {
-      for (let c = 0; c < grid[r].length; c++) {
-        const cell = grid[r][c];
+  // Chỉ ghép các ô dọc tương ứng trong vùng đã xác định.
+  // Không tự tạo liên kết ngang hoặc chéo cho DB-G1, G3, G5, G5-G6.
+  for (let r = 0; r < grid.length - 1; r++) {
+    const upperRow = grid[r];
+    const lowerRow = grid[r + 1];
+    const columnCount = Math.min(
+      upperRow.length,
+      lowerRow.length
+    );
 
-        const neighbors = [
-          [r, c + 1, "horizontal"],
-          [r + 1, c - 1, "diagonal-down-left"],
-          [r + 1, c, "vertical"],
-          [r + 1, c + 1, "diagonal-down-right"]
-        ];
-
-        for (const [nr, nc, direction] of neighbors) {
-          if (nr < 0 || nr >= grid.length) continue;
-          if (nc < 0 || nc >= grid[nr].length) continue;
-
-          collectBetweenCells(
-            cell,
-            grid[nr][nc],
-            `${prefix}-${direction}`,
-            candidates,
-            seen
-          );
-        }
-      }
+    for (let c = 0; c < columnCount; c++) {
+      collectBetweenCells(
+        upperRow[c],
+        lowerRow[c],
+        `${prefix}-vertical`,
+        candidates,
+        seen
+      );
     }
   }
-
+}
   function collectCandidatePatterns(dayN) {
     const candidates = [];
     const seen = new Set();
@@ -476,15 +470,17 @@
     }
 
     const rankedGroups = Array.from(groupMap.entries())
-      .map(([group, positionMap]) => ({
-        group,
-        positionCount: positionMap.size,
-        occurrences: Array.from(positionMap.values())
-      }))
-      .sort((a, b) =>
-        b.positionCount - a.positionCount ||
-        a.group.localeCompare(b.group)
-      );
+  .map(([group, positionMap]) => ({
+    group,
+    positionCount: positionMap.size,
+    occurrences: Array.from(positionMap.values())
+  }))
+  // Chỉ xét nhóm có ít nhất 4 tọa độ hợp lệ khác nhau trên ngày N.
+  .filter(entry => entry.positionCount >= 4)
+  .sort((a, b) =>
+    b.positionCount - a.positionCount ||
+    a.group.localeCompare(b.group)
+  );
 
     const selectedGroups = rankedGroups.slice(0, TOP_GROUPS);
     const patterns = [];
