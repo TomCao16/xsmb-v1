@@ -1,16 +1,19 @@
 
 /*
  * XSMB V1 - POSITIONAL TRANSFER MATCHER
- * Version 7.2.1
+ * Version 7.2.2
  *
- * QUY TẮC BẮT BUỘC:
+ * QUY TẮC:
  * 1. Ngày N: xác định mẫu từ tọa độ chữ số thực tế.
- * 2. Chỉ nhận cặp có thứ tự có >= 4 cạnh tọa độ khác nhau trên N.
- * 3. Ngày N-1: áp dụng nguyên tọa độ của mẫu ngày N để tạo cặp mới.
- * 4. Ngày N: đối chiếu cặp mới với đuôi 2 số của đủ 27 kết quả DB-G7.
- * 5. Chỉ trả các nhóm có kết quả khớp.
- * 6. Gộp cặp đảo chiều khi hiển thị, giữ nguyên mọi lượt và tọa độ.
- * 7. Không xếp hạng theo tần suất; không cắt Top 10/Top 15.
+ * 2. Gộp cặp đảo chiều khi tính ngưỡng vị trí:
+ *    02 và 20 thuộc cùng nhóm 02/20.
+ * 3. Nhóm cần ít nhất 4 cạnh tọa độ hợp lệ, khác nhau.
+ * 4. Ngày N-1: áp dụng nguyên tọa độ mẫu ngày N để tạo cặp.
+ * 5. Ngày N: đối chiếu cặp tạo ra với đuôi 2 số của đủ 27 kết quả DB-G7.
+ * 6. Chỉ trả các nhóm có kết quả thực tế khớp.
+ * 7. Hiển thị rõ cả ngày N và ngày N-1.
+ * 8. Giữ nguyên từng chiều cặp, tọa độ, số gốc và số được tạo.
+ * 9. Không xếp hạng theo tần suất; không cắt Top 10/Top 15.
  *
  * Vùng xét:
  * - DB-G1
@@ -19,18 +22,14 @@
  * - G5-G6: hàng G5 gần G6 nhất kết hợp với G6
  * - G2, G4, G7: chữ số liền nhau trong từng kết quả
  *
- * Trong lưới: xét chữ số liền nhau trong từng số và các vị trí
- * tương ứng/ngang lệch 1 giữa các ô liền kề ngang, dọc, chéo.
- * Không nối các ô không kề nhau.
- *
- * API tương thích:
+ * API:
  * XSMBAlgorithm.analyze(data, { targetDate: "YYYY-MM-DD" })
  */
 
 (function (root) {
   "use strict";
 
-  const VERSION = "XSMB V1 POSITIONAL TRANSFER MATCHER 7.2.1";
+  const VERSION = "XSMB V1 POSITIONAL TRANSFER MATCHER 7.2.2";
   const MIN_POSITION_COUNT = 4;
 
   const PRIZE_ORDER = ["DB", "G1", "G2", "G3", "G4", "G5", "G6", "G7"];
@@ -167,7 +166,9 @@
     const countByPrize = {};
 
     for (const prize of PRIZE_ORDER) {
-      countByPrize[prize] = rows.filter(row => row.prize === prize).length;
+      countByPrize[prize] = rows.filter(
+        row => row.prize === prize
+      ).length;
 
       if (countByPrize[prize] !== EXPECTED_COUNTS[prize]) {
         throw new Error(
@@ -186,9 +187,18 @@
     return rows;
   }
 
+  /*
+   * Chuẩn hóa cặp đảo chiều.
+   * Ví dụ: 02 -> 02; 20 -> 02; 11 -> 11.
+   */
   function canonicalPair(pair) {
     const reverse = pair.split("").reverse().join("");
     return pair <= reverse ? pair : reverse;
+  }
+
+  function formatPairGroup(group) {
+    const reverse = group.split("").reverse().join("");
+    return group === reverse ? group : `${group}/${reverse}`;
   }
 
   function getDays(data) {
@@ -283,10 +293,8 @@
   }
 
   /*
-   * Khóa cạnh không phụ thuộc chiều duyệt để một cạnh tọa độ
-   * thực tế không bị đếm lặp khi các vùng có phần giao nhau.
-   *
-   * Chiều của cặp số vẫn được lưu riêng trong sourcePair.
+   * Khóa cạnh không phụ thuộc chiều duyệt.
+   * Một cạnh tọa độ vật lý chỉ được thu thập một lần.
    */
   function coordinateKey(a, b) {
     return [endpointKey(a), endpointKey(b)].sort().join("|");
@@ -318,8 +326,8 @@
   }
 
   /*
-   * Ghép chữ số liền nhau bên trong một kết quả.
-   * Thứ tự cặp luôn từ trái sang phải.
+   * Ghép chữ số liền nhau trong cùng một kết quả.
+   * Chiều cặp từ trái sang phải.
    */
   function collectWithinSingleResult(row, candidates, seen) {
     const cell = makeCell(row);
@@ -339,12 +347,9 @@
   }
 
   /*
-   * Ghép hai ô kết quả liền kề trong lưới.
-   *
-   * Mỗi chữ số của ô trước được ghép với các chữ số có chỉ số
-   * tương ứng, lệch trái một hoặc lệch phải một ở ô kế bên.
-   *
-   * Ví dụ: chỉ số 2 có thể ghép với chỉ số 1, 2 hoặc 3.
+   * Ghép hai ô kết quả liền kề.
+   * Mỗi vị trí ghép với chỉ số tương ứng, lệch trái 1
+   * hoặc lệch phải 1 trong ô bên cạnh.
    */
   function collectBetweenCells(
     firstCell,
@@ -357,7 +362,10 @@
     const secondLength = secondCell.sourceValue.length;
 
     for (let i = 0; i < firstLength; i++) {
-      for (let j = Math.max(0, i - 1); j <= Math.min(secondLength - 1, i + 1); j++) {
+      const minJ = Math.max(0, i - 1);
+      const maxJ = Math.min(secondLength - 1, i + 1);
+
+      for (let j = minJ; j <= maxJ; j++) {
         const left = makeDigitPosition(firstCell, i);
         const right = makeDigitPosition(secondCell, j);
 
@@ -367,26 +375,17 @@
   }
 
   /*
-   * Duyệt lưới kết quả:
-   * - Cặp chữ số liền nhau bên trong mỗi số.
-   * - Hai ô liền ngang.
-   * - Hai ô liền dọc.
-   * - Hai ô liền chéo.
-   *
-   * Chỉ xét các ô liền kề; không nối ô cách nhau.
+   * Duyệt lưới:
+   * - Chữ số liền nhau trong mỗi số.
+   * - Ô liền ngang, dọc và chéo.
+   * - Không nối các ô cách nhau.
    */
   function collectGridCandidates(grid, relationPrefix, candidates, seen) {
-    const rowCount = grid.length;
-
-    for (let r = 0; r < rowCount; r++) {
+    for (let r = 0; r < grid.length; r++) {
       for (let c = 0; c < grid[r].length; c++) {
         const cell = grid[r][c];
 
-        collectWithinSingleResult(
-          cell,
-          candidates,
-          seen
-        );
+        collectWithinSingleResult(cell, candidates, seen);
 
         const neighbors = [
           [r, c + 1, "horizontal"],
@@ -415,7 +414,7 @@
     const candidates = [];
     const seen = new Set();
 
-    // DB-G1: DB ở hàng trên, G1 ở hàng dưới.
+    // DB-G1: DB hàng trên, G1 hàng dưới.
     const db = getPrizeRows(dayN, ["DB"]);
     const g1 = getPrizeRows(dayN, ["G1"]);
 
@@ -428,72 +427,43 @@
       [makeCell(g1[0], 1, 0)]
     ];
 
-    collectGridCandidates(
-      dbGrid,
-      "DB-G1",
-      candidates,
-      seen
-    );
+    collectGridCandidates(dbGrid, "DB-G1", candidates, seen);
 
-    // G3: sáu kết quả xếp thành lưới 2 hàng x 3 cột.
+    // G3: 2 hàng x 3 cột.
     const g3 = makeGrid(dayN, "G3", 2, 3);
+    collectGridCandidates(g3, "G3", candidates, seen);
 
-    collectGridCandidates(
-      g3,
-      "G3",
-      candidates,
-      seen
-    );
-
-    // G5: sáu kết quả xếp thành lưới 2 hàng x 3 cột.
+    // G5: 2 hàng x 3 cột.
     const g5 = makeGrid(dayN, "G5", 2, 3);
+    collectGridCandidates(g5, "G5", candidates, seen);
 
-    collectGridCandidates(
-      g5,
-      "G5",
-      candidates,
-      seen
-    );
-
-    // G5-G6: hàng G5 gần G6 nhất kết hợp với hàng G6.
+    // G5-G6: hàng G5 gần G6 nhất với G6.
     const g6 = makeGrid(dayN, "G6", 1, 3);
+
     const g5Bottom = g5[1].map((cell, columnIndex) =>
-      makeCell(
-        {
-          date: cell.date,
-          prize: cell.prize,
-          prizeName: cell.prizeName,
-          resultIndex: cell.resultIndex,
-          sourceValue: cell.sourceValue
-        },
-        0,
-        columnIndex
-      )
+      makeCell({
+        date: cell.date,
+        prize: cell.prize,
+        prizeName: cell.prizeName,
+        resultIndex: cell.resultIndex,
+        sourceValue: cell.sourceValue
+      }, 0, columnIndex)
     );
 
     const g5g6Grid = [
       g5Bottom,
       g6[0].map((cell, columnIndex) =>
-        makeCell(
-          {
-            date: cell.date,
-            prize: cell.prize,
-            prizeName: cell.prizeName,
-            resultIndex: cell.resultIndex,
-            sourceValue: cell.sourceValue
-          },
-          1,
-          columnIndex
-        )
+        makeCell({
+          date: cell.date,
+          prize: cell.prize,
+          prizeName: cell.prizeName,
+          resultIndex: cell.resultIndex,
+          sourceValue: cell.sourceValue
+        }, 1, columnIndex)
       )
     ];
 
-    collectGridCandidates(
-      g5g6Grid,
-      "G5-G6",
-      candidates,
-      seen
-    );
+    collectGridCandidates(g5g6Grid, "G5-G6", candidates, seen);
 
     // G2, G4, G7: chỉ ghép chữ số liền nhau trong từng kết quả.
     for (const row of getPrizeRows(dayN, ["G2", "G4", "G7"])) {
@@ -504,40 +474,87 @@
   }
 
   /*
-   * Ngưỡng >= 4 áp dụng cho từng cặp có thứ tự trên ngày N.
-   * Mỗi patternId đại diện cho một cạnh tọa độ thực tế duy nhất.
+   * VERSION 7.2.2
+   *
+   * Tính ngưỡng trên nhóm cặp đảo chiều.
+   * Ví dụ:
+   *   02 có 2 tọa độ
+   *   20 có 2 tọa độ
+   *   nhóm 02/20 có 4 tọa độ -> ĐƯỢC GIỮ
+   *
+   * Mỗi occurrence vẫn giữ sourcePair và tọa độ gốc.
    */
   function extractPositionPatterns(dayN) {
     const candidates = collectCandidatePatterns(dayN);
-    const byPair = new Map();
+    const byGroup = new Map();
 
     for (const candidate of candidates) {
-      if (!byPair.has(candidate.sourcePair)) {
-        byPair.set(candidate.sourcePair, new Map());
+      const groupKey = canonicalPair(candidate.sourcePair);
+
+      if (!byGroup.has(groupKey)) {
+        byGroup.set(groupKey, new Map());
       }
 
-      byPair.get(candidate.sourcePair).set(
-        candidate.patternId,
-        candidate
-      );
+      /*
+       * Khóa gồm chiều cặp và cạnh tọa độ.
+       * Hai chiều 02 và 20 được tính chung ngưỡng,
+       * nhưng từng lượt và tọa độ vẫn được bảo toàn.
+       */
+      const occurrenceKey =
+        `${candidate.sourcePair}|${candidate.patternId}`;
+
+      byGroup.get(groupKey).set(occurrenceKey, candidate);
     }
 
-    const patterns = [];
+    const eligible = [];
 
-    for (const [sourcePair, positionMap] of byPair) {
+    for (const [groupKey, positionMap] of byGroup) {
       const occurrences = Array.from(positionMap.values());
 
+      // Ngưỡng 4 tính chung cả hai chiều đảo ngược.
       if (occurrences.length < MIN_POSITION_COUNT) {
         continue;
       }
 
-      const sourcePairPositionCount = occurrences.length;
+      const directionCounts = {};
 
       for (const occurrence of occurrences) {
+        const pair = occurrence.sourcePair;
+        directionCounts[pair] = (directionCounts[pair] || 0) + 1;
+      }
+
+      eligible.push({
+        groupKey,
+        occurrences,
+        positionCount: occurrences.length,
+        directionCounts
+      });
+    }
+
+    // Sắp xếp ổn định, không loại nhóm theo Top 10/15.
+    eligible.sort((a, b) =>
+      b.positionCount - a.positionCount ||
+      a.groupKey.localeCompare(b.groupKey)
+    );
+
+    const patterns = [];
+
+    for (const group of eligible) {
+      for (const occurrence of group.occurrences) {
         patterns.push({
           ...occurrence,
-          sourceGroup: canonicalPair(sourcePair),
-          sourcePairPositionCount,
+
+          sourceGroup: group.groupKey,
+          sourceGroupLabel: formatPairGroup(group.groupKey),
+
+          // Tổng vị trí của nhóm đảo chiều trên ngày N.
+          sourcePairPositionCount: group.positionCount,
+
+          // Số vị trí riêng theo từng chiều.
+          sourcePairPositionCounts: {
+            ...group.directionCounts
+          },
+
           minimumRequiredPositions: MIN_POSITION_COUNT
         });
       }
@@ -547,9 +564,8 @@
   }
 
   /*
-   * Tìm đúng kết quả tương ứng theo giải và thứ tự kết quả.
-   * Ví dụ G5 kết quả thứ 4 trên ngày N vẫn ánh xạ vào G5
-   * kết quả thứ 4 trên ngày N-1, không tìm theo giá trị số.
+   * Tìm đúng kết quả tương ứng theo giải và thứ tự.
+   * Ví dụ G5 số thứ 4 ngày N ánh xạ sang G5 số thứ 4 ngày N-1.
    */
   function getCellById(day, cellId) {
     const separator = cellId.lastIndexOf(":");
@@ -565,8 +581,20 @@
     return makeCell(row);
   }
 
-  function applyPatternsToPreviousDay(patterns, dayPrevious) {
+  /*
+   * Áp dụng tọa độ mẫu ngày N vào các số ngày N-1.
+   * Output ghi rõ:
+   * - patternDate: ngày N, nơi xác định mẫu.
+   * - appliedDate: ngày N-1, nơi tạo cặp mới.
+   */
+  function applyPatternsToPreviousDay(
+    patterns,
+    dayPrevious,
+    options = {}
+  ) {
     const applied = [];
+    const patternDate = normalizeDate(options.patternDate);
+    const appliedDate = normalizeDate(options.appliedDate);
 
     for (const pattern of patterns) {
       const leftCell = getCellById(
@@ -579,15 +607,12 @@
         pattern.right.cellId
       );
 
-      if (!leftCell || !rightCell) {
-        continue;
-      }
+      if (!leftCell || !rightCell) continue;
 
       const leftDigit = leftCell.sourceValue[pattern.left.digitIndex];
       const rightDigit = rightCell.sourceValue[pattern.right.digitIndex];
 
-      // Không thay tọa độ bằng cách tìm chữ số tương tự.
-      // Nếu vị trí không tồn tại ở N-1 thì bỏ lượt đó.
+      // Không tìm lại chữ số theo giá trị; giữ nguyên chỉ số vị trí.
       if (leftDigit === undefined || rightDigit === undefined) {
         continue;
       }
@@ -605,28 +630,44 @@
       const pair = leftDigit + rightDigit;
 
       applied.push({
+        patternDate,
+        appliedDate,
+
+        // Giữ ngày thực tế trong từng ô dùng để tạo cặp.
         date: normalizeDate(leftCell.date),
+
         patternId: pattern.patternId,
         transferKey: coordinateKey(left, right),
         relation: pattern.relation,
 
-        sourcePairOnTargetDay: pattern.sourcePair,
+        sourceGroupOnPatternDate: pattern.sourceGroup,
+        sourceGroupLabelOnPatternDate: pattern.sourceGroupLabel,
+        sourcePairOnPatternDate: pattern.sourcePair,
         sourcePairPositionCount: pattern.sourcePairPositionCount,
+        sourcePairPositionCounts: {
+          ...pattern.sourcePairPositionCounts
+        },
 
-        // Tọa độ gốc dùng để nhận diện mẫu trên ngày N.
+        // Bằng chứng mẫu gốc trên ngày N.
         patternOccurrence: {
+          date: patternDate,
           patternId: pattern.patternId,
           relation: pattern.relation,
           sourcePair: pattern.sourcePair,
+          sourceGroup: pattern.sourceGroup,
+          sourceGroupLabel: pattern.sourceGroupLabel,
+
           left: { ...pattern.left },
           right: { ...pattern.right }
         },
 
-        // Cặp được tạo bằng dữ liệu ngày N-1.
+        // Cặp thực sự tạo từ các số ngày N-1.
         pair,
         group: canonicalPair(pair),
+        groupLabel: formatPairGroup(canonicalPair(pair)),
 
         left: {
+          date: appliedDate || normalizeDate(leftCell.date),
           prize: leftCell.prize,
           prizeName: leftCell.prizeName,
           resultIndex: leftCell.resultIndex,
@@ -637,6 +678,7 @@
         },
 
         right: {
+          date: appliedDate || normalizeDate(rightCell.date),
           prize: rightCell.prize,
           prizeName: rightCell.prizeName,
           resultIndex: rightCell.resultIndex,
@@ -652,14 +694,14 @@
   }
 
   /*
-   * Lấy đuôi 2 số của đủ 27 kết quả DB-G7 trên ngày N.
-   * Số có một chữ số được chuẩn hóa thành 0x.
+   * Lấy đuôi 2 số của đủ 27 kết quả DB-G7 ngày N.
    */
   function extractActualTails(dayN) {
-    const rows = validateCompleteDay(
-      dayN,
-      normalizeDate(getResultObject(dayN)?.date || dayN?.date)
+    const actualDate = normalizeDate(
+      getResultObject(dayN)?.date || dayN?.date
     );
+
+    const rows = validateCompleteDay(dayN, actualDate);
 
     return rows.map(row => {
       const tail = row.sourceValue.slice(-2).padStart(2, "0");
@@ -671,7 +713,8 @@
         resultIndex: row.resultIndex,
         sourceValue: row.sourceValue,
         tail,
-        group: canonicalPair(tail)
+        group: canonicalPair(tail),
+        groupLabel: formatPairGroup(canonicalPair(tail))
       };
     });
   }
@@ -688,6 +731,7 @@
       throw new Error("Thiếu ngày mục tiêu hợp lệ.");
     }
 
+    // Ngày N là ngày mục tiêu; ngày N-1 là ngày trước đó.
     const sourceDate = shiftDate(targetDate, -1);
     const dateMap = buildDateMap(data);
 
@@ -696,33 +740,34 @@
 
     if (!dayN) {
       throw new Error(
-        `Thiếu dữ liệu ngày mục tiêu N: ${targetDate}.`
+        `Thiếu dữ liệu ngày N dùng để xác định mẫu/đối chiếu: ${targetDate}.`
       );
     }
 
     if (!dayPrevious) {
       throw new Error(
-        `Thiếu dữ liệu ngày nguồn N-1: ${sourceDate}.`
+        `Thiếu dữ liệu ngày N-1 dùng để tạo cặp: ${sourceDate}.`
       );
     }
 
-    // Bảo đảm ngày N có đủ dữ liệu thực tế để xác định mẫu
-    // và làm dữ liệu đối chiếu.
+    // Cả hai ngày phải có đủ 27 kết quả chính xác.
     validateCompleteDay(dayN, targetDate);
-
-    // Bảo đảm ngày N-1 đủ dữ liệu để chuyển tọa độ.
     validateCompleteDay(dayPrevious, sourceDate);
 
-    // BƯỚC 1: Chỉ ngày N được dùng để xác định mẫu vị trí.
+    // BƯỚC 1: Ngày N xác định mẫu vị trí.
     const positionPatterns = extractPositionPatterns(dayN);
 
-    // BƯỚC 2: Chuyển nguyên tọa độ mẫu sang ngày N-1.
+    // BƯỚC 2: Áp dụng tọa độ đó lên ngày N-1.
     const appliedPairs = applyPatternsToPreviousDay(
       positionPatterns,
-      dayPrevious
+      dayPrevious,
+      {
+        patternDate: targetDate,
+        appliedDate: sourceDate
+      }
     );
 
-    // BƯỚC 3: Đối chiếu với đuôi thực tế DB-G7 ngày N.
+    // BƯỚC 3: Ngày N dùng để đối chiếu kết quả thực tế.
     const actualTails = extractActualTails(dayN);
     const actualGroups = new Map();
 
@@ -734,19 +779,15 @@
       actualGroups.get(tail.group).push(tail);
     }
 
-    // Gom tất cả lượt tạo cặp theo cặp đảo chiều chuẩn hóa.
+    // Gom lượt tạo cặp ngày N-1 theo nhóm đảo chiều.
     const grouped = new Map();
 
     for (const item of appliedPairs) {
       if (!grouped.has(item.group)) {
-        const reverse = item.group.split("").reverse().join("");
-
         grouped.set(item.group, {
           group: item.group,
-          reverse,
-          label: item.group === reverse
-            ? item.group
-            : `${item.group}/${reverse}`,
+          reverse: item.group.split("").reverse().join(""),
+          label: formatPairGroup(item.group),
           occurrences: []
         });
       }
@@ -759,82 +800,106 @@
     for (const record of grouped.values()) {
       const matches = actualGroups.get(record.group) || [];
 
-      // Chỉ giữ cặp có ít nhất một kết quả thực tế khớp.
-      if (matches.length === 0) {
-        continue;
-      }
+      // Chỉ giữ nhóm có đuôi thực tế khớp trên ngày N.
+      if (matches.length === 0) continue;
 
+      /*
+       * Đếm tọa độ theo từng chiều trên ngày N.
+       * Không gán tổng nhóm vào số đếm của từng chiều.
+       */
       const sourcePairPositionCounts = {};
 
       for (const pattern of positionPatterns) {
-        if (canonicalPair(pattern.sourcePair) !== record.group) {
-          continue;
-        }
+        if (pattern.sourceGroup !== record.group) continue;
 
         sourcePairPositionCounts[pattern.sourcePair] =
-          pattern.sourcePairPositionCount;
+          (sourcePairPositionCounts[pattern.sourcePair] || 0) + 1;
       }
 
+      const sourceGroupPositionCount = Object.values(
+        sourcePairPositionCounts
+      ).reduce((sum, count) => sum + count, 0);
+
       results.push({
+        // Hai ngày luôn được hiển thị trong mỗi nhóm kết quả.
+        patternDate: targetDate,
+        appliedDate: sourceDate,
+        comparisonDate: targetDate,
+
         group: record.group,
         reverse: record.reverse,
         label: record.label,
 
-        // Số lượt tạo cặp trên ngày N-1 trong nhóm hiển thị.
+        // Số lượt tạo cặp trên ngày N-1.
         frequency: record.occurrences.length,
 
-        // Số tọa độ nguồn cho từng cặp có thứ tự trên ngày N.
+        // Tổng số vị trí mẫu hợp lệ của nhóm đảo chiều trên ngày N.
+        sourceGroupPositionCount,
+
+        // Số vị trí riêng của từng chiều trên ngày N.
         sourcePairPositionCounts,
 
-        // Mọi lượt tạo cặp đều được bảo toàn.
+        // Mọi lượt tạo cặp và tọa độ đều được giữ lại.
         sourceOccurrences: record.occurrences,
 
         matched: true,
 
-        // Số kết quả DB-G7 ngày N xác nhận nhóm này.
+        // Kết quả thực tế xác nhận trên ngày N.
         matchCount: matches.length,
         comparisonOccurrences: matches
       });
     }
 
-    // Không xếp hạng theo tần suất.
-    // Sắp xếp theo nhãn để đầu ra ổn định, dễ kiểm tra.
+    // Không xếp hạng theo tần suất; không cắt Top 10/Top 15.
     results.sort((a, b) => a.group.localeCompare(b.group));
 
     const allSourceGroups = new Set(
       appliedPairs.map(item => item.group)
     );
 
+    const qualifyingSourceGroups = new Set(
+      positionPatterns.map(item => item.sourceGroup)
+    );
+
     return {
       version: VERSION,
 
+      // Ngày N: mẫu và đối chiếu.
       targetDate,
-      sourceDate,
+      patternDate: targetDate,
       compareDate: targetDate,
+      comparisonDate: targetDate,
+
+      // Ngày N-1: áp dụng tọa độ để tạo cặp.
+      sourceDate,
+      appliedDate: sourceDate,
 
       minimumPatternPositions: MIN_POSITION_COUNT,
 
-      // Tổng số tọa độ mẫu được áp dụng.
+      // Tổng số lượt mẫu tọa độ được giữ lại sau ngưỡng.
       patternCount: positionPatterns.length,
 
+      // Số nhóm cặp đảo chiều đủ ngưỡng trên ngày N.
+      qualifyingSourceGroupCount: qualifyingSourceGroups.size,
+
+      // Số chiều cặp riêng biệt đủ điều kiện, nếu giao diện cần.
       qualifyingSourcePairCount: new Set(
         positionPatterns.map(item => item.sourcePair)
       ).size,
 
-      // Tổng lượt tạo cặp trên ngày N-1, trước đối chiếu.
+      // Tổng lượt tạo cặp trên ngày N-1 trước đối chiếu.
       totalAppliedPositions: appliedPairs.length,
 
-      // Số nhóm khác nhau được tạo ra trước đối chiếu.
+      // Nhóm khác nhau được tạo ra trước đối chiếu.
       uniqueGroupCount: allSourceGroups.size,
 
-      // Số nhóm còn lại sau khi đối chiếu thực tế.
+      // Nhóm khớp kết quả thực tế ngày N.
       matchedGroupCount: results.length,
 
-      // Toàn bộ nhóm khớp, không cắt Top 10/Top 15.
+      // Toàn bộ nhóm khớp, không giới hạn Top 10/15.
       results,
 
-      // Trường tương thích với một số giao diện cũ.
-      // Đây là toàn bộ kết quả, không phải danh sách Top 10/15.
+      // Tương thích giao diện cũ; không phải danh sách Top.
       top10: results,
       top15: results,
 
@@ -850,22 +915,21 @@
 
       comparisonPrizeOrder: PRIZE_ORDER.slice(),
 
+      // Bằng chứng dữ liệu của hai ngày.
       actualTails,
       positionPatterns,
       appliedPairs,
 
       notes: [
-        "Ngày N xác định mẫu vị trí từ kết quả thực tế.",
-        "Chỉ giữ cặp có thứ tự với ít nhất 4 cạnh tọa độ khác nhau trên ngày N.",
-        "Chuyển nguyên tọa độ sang ngày N-1 để tạo cặp.",
+        "patternDate/targetDate là ngày N: xác định mẫu và đối chiếu thực tế.",
+        "appliedDate/sourceDate là ngày N-1: áp dụng tọa độ để tạo cặp.",
+        "Ngưỡng 4 tính chung nhóm cặp đảo chiều, ví dụ 02 và 20 thuộc nhóm 02/20.",
+        "Các chiều cặp và tọa độ của từng vị trí vẫn được bảo toàn.",
         "Không tìm lại tọa độ theo giá trị chữ số.",
         "Đối chiếu với đuôi 2 số của đủ 27 kết quả DB-G7 ngày N.",
         "Dữ liệu thiếu hoặc không đủ 27 kết quả sẽ báo lỗi.",
-        "Gộp cặp đảo chiều khi hiển thị nhưng giữ nguyên từng lượt tạo cặp.",
-        "sourcePairPositionCounts lưu số tọa độ theo từng cặp có thứ tự.",
-        "frequency đếm lượt tạo cặp trên ngày N-1.",
-        "matchCount đếm kết quả thực tế xác nhận trên ngày N.",
-        "sourceOccurrences và comparisonOccurrences là hai danh sách khác nhau.",
+        "sourceOccurrences thể hiện các lượt tạo cặp từ ngày N-1 và mẫu tương ứng ngày N.",
+        "comparisonOccurrences thể hiện kết quả thực tế ngày N dùng để xác nhận.",
         "Không xếp hạng theo tần suất và không giới hạn Top 10/Top 15."
       ]
     };
@@ -875,6 +939,7 @@
     version: VERSION,
     prizeOrder: PRIZE_ORDER.slice(),
     canonicalPair,
+    formatPairGroup,
     extractPositionPatterns,
     applyPatternsToPreviousDay,
     extractActualTails,
